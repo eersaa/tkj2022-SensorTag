@@ -34,3 +34,4 @@ RemoteSystemsTempFiles
 Debug
 .jxbrowser.userdata
 *.launches
+*src
