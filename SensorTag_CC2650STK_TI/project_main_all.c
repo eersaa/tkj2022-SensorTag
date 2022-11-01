@@ -65,12 +65,24 @@ Board_LED0 | PIN_GPIO_OUTPUT_EN | PIN_GPIO_LOW | PIN_PUSHPULL | PIN_DRVSTR_MAX,
 // Napinpainalluksen keskeytyksen käsittelijäfunktio
 void buttonFxn(PIN_Handle handle, PIN_Id pinId)
 {
+    // Luetaan ledin tila
+    uint_t pinValue = PIN_getOutputValue( Board_LED0);
 
-    // Vaihdetaan led-pinnin tilaa negaatiolla
-    uint_t
-    pinValue = PIN_getOutputValue( Board_LED0);
-    pinValue = !pinValue;
+    if (programState == WAITING_HOME) {
+
+        //Vaihdetaan ledin tila
+        pinValue = !pinValue;
+        programState = WAITING_READ;
+
+    } else if (programState == WAITING_READ) {
+
+        //Vaihdetaan ledin tila
+        pinValue = !pinValue;
+        programState = WAITING_HOME;
+    }
+
     PIN_setOutputValue(ledHandle, Board_LED0, pinValue);
+
 }
 
 /* Task Functions */
