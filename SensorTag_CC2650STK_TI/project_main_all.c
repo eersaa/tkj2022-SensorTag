@@ -71,13 +71,13 @@ void buttonFxn(PIN_Handle handle, PIN_Id pinId)
     if (programState == WAITING_HOME) {
 
         //Vaihdetaan ledin tila
-        pinValue = !pinValue;
+        pinValue = 1;
         programState = WAITING_READ;
 
-    } else if (programState == WAITING_READ) {
+    } else if ( programState == WAITING_READ) {
 
         //Vaihdetaan ledin tila
-        pinValue = !pinValue;
+        pinValue = 0;
         programState = WAITING_HOME;
     }
 
