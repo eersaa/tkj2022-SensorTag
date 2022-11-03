@@ -275,7 +275,7 @@ Void mpuSensorFxn(UArg arg0, UArg arg1) {
             mpu9250_get_data(&i2cMPU, &ax, &ay, &az, &gx, &gy, &gz);
 
             // MPU close i2c
-            i2cMPU = I2C_close(i2cMPU);
+            I2C_close(i2cMPU);
 
             sprintf(merkkijono, "Sensor:%.2f,%.2f,%.2f,%.2f,%.2f,%.2f\n", ax, ay, az, gx, gy, gz);
             System_printf(merkkijono);
