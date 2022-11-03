@@ -20,11 +20,13 @@
 #include "Board.h"
 #include "wireless/comm_lib.h"
 #include "sensors/opt3001.h"
+#include "sensors/mpu9250.h"
 
 /* Task */
 #define STACKSIZE 2048
 Char sensorTaskStack[STACKSIZE];
 Char uartTaskStack[STACKSIZE];
+Char mpuTaskStack[STACKSIZE];
 
 // JTKJ: Teht�v� 3. Tilakoneen esittely
 // JTKJ: Exercise 3. Definition of the state machine
@@ -61,6 +63,22 @@ PIN_Config ledConfig[] = {
 Board_LED0 | PIN_GPIO_OUTPUT_EN | PIN_GPIO_LOW | PIN_PUSHPULL | PIN_DRVSTR_MAX,
                            PIN_TERMINATE // Asetustaulukko lopetetaan aina tällä vakiolla
         };
+
+// MPU power pin global variables
+static PIN_Handle hMpuPin;
+static PIN_State  MpuPinState;
+
+// MPU power pin
+static PIN_Config MpuPinConfig[] = {
+    Board_MPU_POWER  | PIN_GPIO_OUTPUT_EN | PIN_GPIO_HIGH | PIN_PUSHPULL | PIN_DRVSTR_MAX,
+    PIN_TERMINATE
+};
+
+// MPU uses its own I2C interface
+static const I2CCC26XX_I2CPinCfg i2cMPUCfg = {
+    .pinSDA = Board_I2C0_SDA1,
+    .pinSCL = Board_I2C0_SCL1
+};
 
 // Napinpainalluksen keskeytyksen käsittelijäfunktio
 void buttonFxn(PIN_Handle handle, PIN_Id pinId)
@@ -221,6 +239,8 @@ Int main(void)
     Task_Params sensorTaskParams;
     Task_Handle uartTaskHandle;
     Task_Params uartTaskParams;
+    Task_Handle mpuTask;
+    Task_Params mpuTaskParams;
 
     // Initialize board
     Board_initGeneral();
@@ -261,7 +281,7 @@ Int main(void)
     sensorTaskHandle = Task_create(sensorTaskFxn, &sensorTaskParams, NULL);
     if (sensorTaskHandle == NULL)
     {
-        System_abort("Task create failed!");
+        System_abort("Sensor task create failed!");
     }
 
     Task_Params_init(&uartTaskParams);
@@ -271,7 +291,16 @@ Int main(void)
     uartTaskHandle = Task_create(uartTaskFxn, &uartTaskParams, NULL);
     if (uartTaskHandle == NULL)
     {
-        System_abort("Task create failed!");
+        System_abort("UART task create failed!");
+    }
+
+    // mpu9250 task
+    Task_Params_init(&mpuTaskParams);
+    mpuTaskParams.stackSize = STACKSIZE;
+    mpuTaskParams.stack = &mpuTaskStack;
+    mpuTask = Task_create((Task_FuncPtr)mpuSensorFxn, &mpuTaskParams, NULL);
+    if (task == NULL) {
+        System_abort("MPU task create failed!");
     }
 
     /* Sanity check */
