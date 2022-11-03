@@ -182,22 +182,7 @@ Void sensorTaskFxn(UArg arg0, UArg arg1)
     I2C_Params_init(&i2cParams);
     i2cParams.bitRate = I2C_400kHz;
 
-    // Avataan yhteys
-    i2c = I2C_open(Board_I2C_TMP, &i2cParams);
-    if (i2c == NULL)
-    {
-        System_abort("Error Initializing I2C\n");
-    }
 
-    // JTKJ: Teht�v� 2. Alusta sensorin OPT3001 setup-funktiolla
-    //       Laita enne funktiokutsua eteen 100ms viive (Task_sleep)
-    // JTKJ: Exercise 2. Setup the OPT3001 sensor for use
-    //       Before calling the setup function, insertt 100ms delay with Task_sleep
-
-    Task_sleep(100000 / Clock_tickPeriod);
-
-    //Initialize opt3001 light sensor
-    opt3001_setup(&i2c);
 
     while (1)
     {
@@ -211,14 +196,26 @@ Void sensorTaskFxn(UArg arg0, UArg arg1)
         //       Remember to modify state
         if (programState == WAITING_READ)
         {
+            // Avataan yhteys
+            i2c = I2C_open(Board_I2C_TMP, &i2cParams);
+            if (i2c == NULL)
+            {
+                System_abort("Error Initializing I2C\n");
+            }
 
+            Task_sleep(100000 / Clock_tickPeriod);
+
+            //Initialize opt3001 light sensor
+            opt3001_setup(&i2c);
             ambientLight = opt3001_get_data(&i2c);
+
+            I2C_close(i2c);
 
             sprintf(merkkijono, "Sensor:%f\n", ambientLight);
             System_printf(merkkijono);
             System_flush();
 
-            programState = WRITE_UART;
+            programState = READ_MPU;
         }
         /*
          sprintf(merkkijono,"programState %d\n",programState);
@@ -281,7 +278,7 @@ Void mpuSensorFxn(UArg arg0, UArg arg1) {
             System_printf(merkkijono);
             System_flush();
 
-            programState = WAITING_READ;
+            programState = WRITE_UART;
 
         }
 
