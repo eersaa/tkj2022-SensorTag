@@ -93,7 +93,7 @@ void buttonFxn(PIN_Handle handle, PIN_Id pinId)
         pinValue = 1;
         programState = WAITING_READ;
 
-    } else if ( programState == WAITING_READ) {
+    } else {
 
         //Vaihdetaan ledin tila
         pinValue = 0;
@@ -207,6 +207,9 @@ Void sensorTaskFxn(UArg arg0, UArg arg1)
 
             //Initialize opt3001 light sensor
             opt3001_setup(&i2c);
+
+            Task_sleep(100000 / Clock_tickPeriod);
+
             ambientLight = opt3001_get_data(&i2c);
 
             I2C_close(i2c);
@@ -366,6 +369,7 @@ Int main(void)
     Task_Params_init(&mpuTaskParams);
     mpuTaskParams.stackSize = STACKSIZE;
     mpuTaskParams.stack = &mpuTaskStack;
+    mpuTaskParams.priority = 2;
     mpuTask = Task_create((Task_FuncPtr)mpuSensorFxn, &mpuTaskParams, NULL);
     if (mpuTask == NULL) {
         System_abort("MPU task create failed!");
