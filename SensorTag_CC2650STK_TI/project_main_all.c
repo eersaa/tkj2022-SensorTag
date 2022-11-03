@@ -251,26 +251,38 @@ Void mpuSensorFxn(UArg arg0, UArg arg1) {
     System_printf("MPU9250: Power ON\n");
     System_flush();
 
-    // MPU open i2c
-    i2cMPU = I2C_open(Board_I2C, &i2cMPUParams);
-    if (i2cMPU == NULL) {
-        System_abort("Error Initializing I2CMPU\n");
-    }
-
-    // MPU setup and calibration
-    System_printf("MPU9250: Setup and calibration...\n");
-    System_flush();
-
-    mpu9250_setup(&i2cMPU);
-
-    System_printf("MPU9250: Setup and calibration OK\n");
-    System_flush();
-
     // Loop forever
     while (1) {
 
-        // MPU ask data
-        mpu9250_get_data(&i2cMPU, &ax, &ay, &az, &gx, &gy, &gz);
+        if (programState == READ_MPU) {
+            // MPU open i2c
+            i2cMPU = I2C_open(Board_I2C, &i2cMPUParams);
+            if (i2cMPU == NULL) {
+                System_abort("Error Initializing I2CMPU\n");
+            }
+
+            // MPU setup and calibration
+            System_printf("MPU9250: Setup and calibration...\n");
+            System_flush();
+
+            mpu9250_setup(&i2cMPU);
+
+            System_printf("MPU9250: Setup and calibration OK\n");
+            System_flush();
+
+            // MPU ask data
+            mpu9250_get_data(&i2cMPU, &ax, &ay, &az, &gx, &gy, &gz);
+
+            // MPU close i2c
+            i2cMPU = I2C_close(i2cMPU);
+
+            sprintf(merkkijono, "Sensor:%.2f,%.2f,%.2f,%.2f,%.2f,%.2f\n", ax, ay, az, gx, gy, gz);
+            System_printf(merkkijono);
+            System_flush();
+
+            programState = WAITING_READ;
+
+        }
 
         // Sleep 100ms
         Task_sleep(100000 / Clock_tickPeriod);
