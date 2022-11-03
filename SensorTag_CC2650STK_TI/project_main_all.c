@@ -12,6 +12,7 @@
 #include <ti/drivers/PIN.h>
 #include <ti/drivers/pin/PINCC26XX.h>
 #include <ti/drivers/I2C.h>
+#include <ti/drivers/i2c/I2CCC26XX.h>
 #include <ti/drivers/Power.h>
 #include <ti/drivers/power/PowerCC26XX.h>
 #include <ti/drivers/UART.h>
@@ -305,7 +306,7 @@ Int main(void)
     mpuTaskParams.stackSize = STACKSIZE;
     mpuTaskParams.stack = &mpuTaskStack;
     mpuTask = Task_create((Task_FuncPtr)mpuSensorFxn, &mpuTaskParams, NULL);
-    if (task == NULL) {
+    if (mpuTask == NULL) {
         System_abort("MPU task create failed!");
     }
 
