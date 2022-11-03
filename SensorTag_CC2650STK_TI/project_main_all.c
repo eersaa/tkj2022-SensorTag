@@ -232,6 +232,70 @@ Void sensorTaskFxn(UArg arg0, UArg arg1)
     }
 }
 
+Void mpuSensorFxn(UArg arg0, UArg arg1) {
+
+    float ax, ay, az, gx, gy, gz;
+
+    I2C_Handle i2cMPU; // Own i2c-interface for MPU9250 sensor
+    I2C_Params i2cMPUParams;
+
+    I2C_Params_init(&i2cMPUParams);
+    i2cMPUParams.bitRate = I2C_400kHz;
+    // Note the different configuration below
+    i2cMPUParams.custom = (uintptr_t)&i2cMPUCfg;
+
+    // MPU power on
+    PIN_setOutputValue(hMpuPin,Board_MPU_POWER, Board_MPU_POWER_ON);
+
+    // Wait 100ms for the MPU sensor to power up
+    Task_sleep(100000 / Clock_tickPeriod);
+    System_printf("MPU9250: Power ON\n");
+    System_flush();
+
+    // Loop forever
+    while (1) {
+
+        if (programState == READ_MPU) {
+            // MPU open i2c
+            i2cMPU = I2C_open(Board_I2C, &i2cMPUParams);
+            if (i2cMPU == NULL) {
+                System_abort("Error Initializing I2CMPU\n");
+            }
+
+            // MPU setup and calibration
+            System_printf("MPU9250: Setup and calibration...\n");
+            System_flush();
+
+            mpu9250_setup(&i2cMPU);
+
+            System_printf("MPU9250: Setup and calibration OK\n");
+            System_flush();
+
+            // MPU ask data
+            mpu9250_get_data(&i2cMPU, &ax, &ay, &az, &gx, &gy, &gz);
+
+            // MPU close i2c
+            i2cMPU = I2C_close(i2cMPU);
+
+            sprintf(merkkijono, "Sensor:%.2f,%.2f,%.2f,%.2f,%.2f,%.2f\n", ax, ay, az, gx, gy, gz);
+            System_printf(merkkijono);
+            System_flush();
+
+            programState = WAITING_READ;
+
+        }
+
+        // Sleep 100ms
+        Task_sleep(100000 / Clock_tickPeriod);
+    }
+
+    // Program never gets here..
+    // MPU close i2c
+    // I2C_close(i2cMPU);
+    // MPU power off
+    // PIN_setOutputValue(hMpuPin,Board_MPU_POWER, Board_MPU_POWER_OFF);
+}
+
 Int main(void)
 {
 
