@@ -266,6 +266,12 @@ Int main(void)
         System_abort("Error initializing LED pins\n");
     }
 
+    // Open MPU power pin
+    hMpuPin = PIN_open(&MpuPinState, MpuPinConfig);
+    if (hMpuPin == NULL) {
+        System_abort("Pin open failed!");
+    }
+
     // Asetetaan painonappi-pinnille keskeytyksen käsittelijäksi
     // funktio buttonFxn
     if (PIN_registerIntCb(buttonHandle, &buttonFxn) != 0)
