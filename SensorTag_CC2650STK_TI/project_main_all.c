@@ -43,7 +43,7 @@ enum state programState = WAITING_HOME;
 // JTKJ: Teht�v� 3. Valoisuuden globaali muuttuja
 // JTKJ: Exercise 3. Global variable for ambient light
 double ambientLight = -1000.0;
-char merkkijono[20];
+char merkkijono[50];
 
 // RTOS:n globaalit muuttujat pinnien käyttöön
 static PIN_Handle buttonHandle;
@@ -152,14 +152,20 @@ Void uartTaskFxn(UArg arg0, UArg arg1)
             sprintf(merkkijono, "%s\r", merkkijono);
             UART_write(uart, merkkijono, strlen(merkkijono));
 
-            programState = WAITING_READ;
+
+            //Check the state before update
+            if (programState == WRITE_UART) {
+                programState = WAITING_READ;
+            } else {
+                programState = WAITING_HOME;
+            }
 
         }
-        /*
+
          // Print program state
          sprintf(merkkijono,"programState %d\n",programState);
          System_printf(merkkijono);
-
+         /*
          // Just for sanity check for exercise, you can comment this out
          System_printf("uartTask\n");
          System_flush();
@@ -218,15 +224,20 @@ Void sensorTaskFxn(UArg arg0, UArg arg1)
             System_printf(merkkijono);
             System_flush();
 
-            programState = READ_MPU;
+            //Check the state before update
+            if (programState == WAITING_READ) {
+                programState = READ_MPU;
+            } else {
+                programState = WAITING_HOME;
+            }
+
         }
         /*
-         sprintf(merkkijono,"programState %d\n",programState);
-         System_printf(merkkijono);
-
-         System_printf("SensorTask\n");
-         System_flush();
-         */
+        sprintf(merkkijono,"programState %d\n",programState);
+        System_printf(merkkijono);
+        System_printf("SensorTask\n");
+        System_flush();
+        */
         // Once per second, you can modify this
         Task_sleep(1000000 / Clock_tickPeriod);
     }
@@ -277,11 +288,16 @@ Void mpuSensorFxn(UArg arg0, UArg arg1) {
             // MPU close i2c
             I2C_close(i2cMPU);
 
-            sprintf(merkkijono, "Sensor:%.2f,%.2f,%.2f,%.2f,%.2f,%.2f\n", ax, ay, az, gx, gy, gz);
+            sprintf(merkkijono, "mpu:%+4.2f,%+4.2f,%+4.2f,%+4.2f,%+4.2f,%+4.2f\n", ax, ay, az, gx, gy, gz);
             System_printf(merkkijono);
             System_flush();
 
-            programState = WRITE_UART;
+            //Check the state before update
+            if (programState == READ_MPU) {
+                programState = WRITE_UART;
+            } else {
+                programState = WAITING_HOME;
+            }
 
         }
 
