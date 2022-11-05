@@ -29,8 +29,7 @@ Char sensorTaskStack[STACKSIZE];
 Char uartTaskStack[STACKSIZE];
 Char mpuTaskStack[STACKSIZE];
 
-// JTKJ: Teht�v� 3. Tilakoneen esittely
-// JTKJ: Exercise 3. Definition of the state machine
+// Definition of the state machine states
 enum state
 {
     WAITING_HOME = 1, //
@@ -40,8 +39,7 @@ enum state
 };
 enum state programState = WAITING_HOME;
 
-// JTKJ: Teht�v� 3. Valoisuuden globaali muuttuja
-// JTKJ: Exercise 3. Global variable for ambient light
+//Global variable for ambient light
 double ambientLight = -1000.0;
 char merkkijono[50];
 
@@ -108,8 +106,6 @@ void buttonFxn(PIN_Handle handle, PIN_Id pinId)
 Void uartTaskFxn(UArg arg0, UArg arg1)
 {
 
-    // JTKJ: Teht�v� 4. Lis�� UARTin alustus: 9600,8n1
-    // JTKJ: Exercise 4. Setup here UART connection as 9600,8n1
     // UART-kirjaston asetukset
     UART_Handle uart;
     UART_Params uartParams;
@@ -136,10 +132,7 @@ Void uartTaskFxn(UArg arg0, UArg arg1)
     while (1)
     {
 
-        // JTKJ: Teht�v� 3. Kun tila on oikea, tulosta sensoridata merkkijonossa debug-ikkunaan
-        //       Muista tilamuutos
-        // JTKJ: Exercise 3. Print out sensor data as string to debug window if the state is correct
-        //       Remember to modify state
+        // Print out the sensor data to uart
         if (programState == WRITE_UART)
         {
 
@@ -147,8 +140,7 @@ Void uartTaskFxn(UArg arg0, UArg arg1)
             System_printf(merkkijono);
             System_flush();
 
-            // JTKJ: Teht�v� 4. L�het� sama merkkijono UARTilla
-            // JTKJ: Exercise 4. Send the same sensor data string with UART
+            // Write the string to uart
             sprintf(merkkijono, "%s\r", merkkijono);
             UART_write(uart, merkkijono, strlen(merkkijono));
 
@@ -162,6 +154,7 @@ Void uartTaskFxn(UArg arg0, UArg arg1)
 
         }
         /*
+        //debug
          // Print program state
          sprintf(merkkijono,"programState %d\n",programState);
          System_printf(merkkijono);
@@ -170,6 +163,7 @@ Void uartTaskFxn(UArg arg0, UArg arg1)
          System_printf("uartTask\n");
          System_flush();
          */
+
         // Once per second, you can modify this
         Task_sleep(100000 / Clock_tickPeriod);
     }
@@ -181,9 +175,6 @@ Void sensorTaskFxn(UArg arg0, UArg arg1)
     I2C_Handle i2c;
     I2C_Params i2cParams;
 
-    // JTKJ: Teht�v� 2. Avaa i2c-v�yl� taskin k�ytt��n
-    // JTKJ: Exercise 2. Open the i2c bus
-
     // Alustetaan i2c-väylä
     I2C_Params_init(&i2cParams);
     i2cParams.bitRate = I2C_400kHz;
@@ -193,13 +184,7 @@ Void sensorTaskFxn(UArg arg0, UArg arg1)
     while (1)
     {
 
-        // JTKJ: Teht�v� 2. Lue sensorilta dataa ja tulosta se Debug-ikkunaan merkkijonona
-        // JTKJ: Exercise 2. Read sensor data and print it to the Debug window as string
-
-        // JTKJ: Teht�v� 3. Tallenna mittausarvo globaaliin muuttujaan
-        //       Muista tilamuutos
-        // JTKJ: Exercise 3. Save the sensor value into the global variable
-        //       Remember to modify state
+        // Read the ambient light sensor to variable
         if (programState == WAITING_READ)
         {
             // Avataan yhteys
@@ -234,11 +219,13 @@ Void sensorTaskFxn(UArg arg0, UArg arg1)
 
         }
         /*
+        //debug
         sprintf(merkkijono,"programState %d\n",programState);
         System_printf(merkkijono);
         System_printf("SensorTask\n");
         System_flush();
         */
+
         // Once per second, you can modify this
         Task_sleep(1000000 / Clock_tickPeriod);
     }
@@ -328,12 +315,10 @@ Int main(void)
     Board_initGeneral();
     Init6LoWPAN();
 
-    // JTKJ: Teht�v� 2. Ota i2c-v�yl� k�ytt��n ohjelmassa
-    // JTKJ: Exercise 2. Initialize i2c bus
+    // Initialize i2c bus
     Board_initI2C();
 
-    // JTKJ: Teht�v� 4. Ota UART k�ytt��n ohjelmassa
-    // JTKJ: Exercise 4. Initialize UART
+    // Initialize UART
     Board_initUART();
 
     // Otetaan pinnit käyttöön ohjelmassa
