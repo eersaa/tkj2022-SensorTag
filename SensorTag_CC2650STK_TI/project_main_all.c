@@ -161,11 +161,11 @@ Void uartTaskFxn(UArg arg0, UArg arg1)
             }
 
         }
-
+        /*
          // Print program state
          sprintf(merkkijono,"programState %d\n",programState);
          System_printf(merkkijono);
-         /*
+
          // Just for sanity check for exercise, you can comment this out
          System_printf("uartTask\n");
          System_flush();
@@ -214,7 +214,8 @@ Void sensorTaskFxn(UArg arg0, UArg arg1)
             //Initialize opt3001 light sensor
             opt3001_setup(&i2c);
 
-            Task_sleep(100000 / Clock_tickPeriod);
+            //Delay the data read to get successful reading
+            Task_sleep(1000000 / Clock_tickPeriod);
 
             ambientLight = opt3001_get_data(&i2c);
 
@@ -274,13 +275,13 @@ Void mpuSensorFxn(UArg arg0, UArg arg1) {
             }
 
             // MPU setup and calibration
-            System_printf("MPU9250: Setup and calibration...\n");
-            System_flush();
+//            System_printf("MPU9250: Setup and calibration...\n");
+//            System_flush();
 
             mpu9250_setup(&i2cMPU);
 
-            System_printf("MPU9250: Setup and calibration OK\n");
-            System_flush();
+//            System_printf("MPU9250: Setup and calibration OK\n");
+//            System_flush();
 
             // MPU ask data
             mpu9250_get_data(&i2cMPU, &ax, &ay, &az, &gx, &gy, &gz);
