@@ -113,7 +113,6 @@ void buttonFxn(PIN_Handle handle, PIN_Id pinId)
         Clock_start(clkHandle); // Start the clock interruption
         // Prepare for new data capture
         timeStampSet = FALSE;
-        dataPtr = mpuData;
 
         programState = WAITING_READ;
 
@@ -247,8 +246,21 @@ Void mpuSensorFxn(UArg arg0, UArg arg1) {
         if (programState == READ_MPU) {
 
             if (!timeStampSet) {
+
+                // Clear the table
+                for (dataPtr = mpuData; dataPtr < &mpuData[sizeof(mpuData)/sizeof(mpuData[0])]; ++dataPtr) {
+                    dataPtr->timestamp = 0;
+                    dataPtr->ax = 0.0;
+                    dataPtr->ay = 0.0;
+                    dataPtr->az = 0.0;
+                    dataPtr->gx = 0.0;
+                    dataPtr->gy = 0.0;
+                    dataPtr->gz = 0.0;
+                }
+                // Set the pointer again to start of table
+                dataPtr = mpuData;
+
                 firstTimeStamp = (Clock_getTicks()*Clock_tickPeriod)/1000; // In milliseconds
-                dataPtr->timestamp = 0;
                 timeStampSet = TRUE;
             } else {
                 dataPtr->timestamp = (Clock_getTicks()*Clock_tickPeriod)/1000 - firstTimeStamp; // In milliseconds
