@@ -189,24 +189,25 @@ Void mpuSensorFxn(UArg arg0, UArg arg1) {
     System_printf("MPU9250: Power ON\n");
     System_flush();
 
+    // MPU open i2c
+    i2cMPU = I2C_open(Board_I2C, &i2cMPUParams);
+    if (i2cMPU == NULL) {
+        System_abort("Error Initializing I2CMPU\n");
+    }
+
+    // MPU setup and calibration
+//            System_printf("MPU9250: Setup and calibration...\n");
+//            System_flush();
+
+    mpu9250_setup(&i2cMPU);
+
+//            System_printf("MPU9250: Setup and calibration OK\n");
+//            System_flush();
+
     // Loop forever
     while (1) {
 
         if (programState == READ_MPU) {
-            // MPU open i2c
-            i2cMPU = I2C_open(Board_I2C, &i2cMPUParams);
-            if (i2cMPU == NULL) {
-                System_abort("Error Initializing I2CMPU\n");
-            }
-
-            // MPU setup and calibration
-//            System_printf("MPU9250: Setup and calibration...\n");
-//            System_flush();
-
-            mpu9250_setup(&i2cMPU);
-
-//            System_printf("MPU9250: Setup and calibration OK\n");
-//            System_flush();
 
             // MPU ask data
             mpu9250_get_data(&i2cMPU, &ax, &ay, &az, &gx, &gy, &gz);
@@ -298,7 +299,7 @@ Int main(void)
     mpuTaskParams.stackSize = STACKSIZE;
     mpuTaskParams.stack = &mpuTaskStack;
     mpuTaskParams.priority = 2;
-    mpuTask = Task_create((Task_FuncPtr)mpuSensorFxn, &mpuTaskParams, NULL);
+    mpuTask = Task_create(mpuSensorFxn, &mpuTaskParams, NULL);
     if (mpuTask == NULL) {
         System_abort("MPU task create failed!");
     }
