@@ -94,7 +94,7 @@ struct dataPoint {
 };
 
 // Define variables for data capture
-struct dataPoint mpuData[100]; // Table for datapoints
+struct dataPoint mpuData[5]; // Table for datapoints
 struct dataPoint *dataPtr; // Pointer for data writing
 uint32_t firstTimeStamp; // Timestamp of first datapoint
 int8_t timeStampSet = FALSE; // Flag to for remembering that capture started
@@ -170,9 +170,13 @@ Void uartTaskFxn(UArg arg0, UArg arg1)
 
     while (1)
     {
-
+        if (programState == WAITING_HOME &&
+                dataReady)
+        {
+            programState = WRITE_UART;
+        }
         // Print out the sensor data to uart
-        if (programState == WRITE_UART)
+        else if (programState == WRITE_UART)
         {
             // Print data as csv format
             System_printf("timestamp,acc_x,acc_y,acc_z,gyro_x,gyro_y,gyro_z\n"); // Column headers
@@ -198,6 +202,7 @@ Void uartTaskFxn(UArg arg0, UArg arg1)
 
             System_flush();
 
+            dataReady = FALSE;  // Reset after data write
             programState = WAITING_HOME;
 
         }
@@ -302,9 +307,11 @@ Void mpuSensorFxn(UArg arg0, UArg arg1) {
 
             //Check the state and address limit before update
             if (programState == READ_MPU &&
-                    dataPtr < &mpuData[sizeof(mpuData)/sizeof(mpuData[0])]) {
+                dataPtr < &mpuData[sizeof(mpuData)/sizeof(mpuData[0])]) {
+
                 programState = WAITING_READ;
             } else {
+                dataReady = TRUE;
                 programState = WAITING_HOME;
             }
 
