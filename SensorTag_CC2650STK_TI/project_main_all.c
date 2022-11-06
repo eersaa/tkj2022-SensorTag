@@ -179,7 +179,13 @@ Void uartTaskFxn(UArg arg0, UArg arg1)
         else if (programState == WRITE_UART)
         {
             // Print data as csv format
-            System_printf("timestamp,acc_x,acc_y,acc_z,gyro_x,gyro_y,gyro_z\n"); // Column headers
+            sprintf(merkkijono, "timestamp,acc_x,acc_y,acc_z,gyro_x,gyro_y,gyro_z\n");
+            System_printf(merkkijono); // Column headers
+            System_flush();
+
+            // Write the string to uart
+            sprintf(merkkijono, "%s\r", merkkijono);
+            UART_write(uart, merkkijono, strlen(merkkijono));
 
             // Datapoints
             for (dataPtr = mpuData; dataPtr < &mpuData[sizeof(mpuData)/sizeof(mpuData[0])]; ++dataPtr) {
@@ -194,13 +200,12 @@ Void uartTaskFxn(UArg arg0, UArg arg1)
                         dataPtr->gz
                         );
                 System_printf(merkkijono);
+                System_flush();
 
                 // Write the string to uart
                 sprintf(merkkijono, "%s\r", merkkijono);
                 UART_write(uart, merkkijono, strlen(merkkijono));
             }
-
-            System_flush();
 
             dataReady = FALSE;  // Reset after data write
             programState = WAITING_HOME;
