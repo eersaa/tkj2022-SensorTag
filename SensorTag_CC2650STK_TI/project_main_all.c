@@ -94,7 +94,7 @@ struct dataPoint {
 };
 
 // Define variables for data capture
-struct dataPoint mpuData[250]; // Table for datapoints
+struct dataPoint mpuData[200]; // Table for datapoints
 struct dataPoint *dataPtr; // Pointer for data writing
 uint32_t firstTimeStamp; // Timestamp of first datapoint
 int8_t timeStampSet = FALSE; // Flag to for remembering that capture started
@@ -336,7 +336,7 @@ Void mpuSensorFxn(UArg arg0, UArg arg1) {
 
 Int main(void)
 {
-    uint16_t cycle = 20; // milliseconds
+    uint16_t cycle = 50; // milliseconds
 
     // Task variables
     Task_Handle uartTaskHandle;
