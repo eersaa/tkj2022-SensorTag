@@ -94,7 +94,7 @@ struct dataPoint {
 };
 
 // Define variables for data capture
-struct dataPoint mpuData[5]; // Table for datapoints
+struct dataPoint mpuData[250]; // Table for datapoints
 struct dataPoint *dataPtr; // Pointer for data writing
 uint32_t firstTimeStamp; // Timestamp of first datapoint
 int8_t timeStampSet = FALSE; // Flag to for remembering that capture started
@@ -318,13 +318,13 @@ Void mpuSensorFxn(UArg arg0, UArg arg1) {
                 programState = WAITING_READ;
             } else {
                 PIN_setOutputValue(ledHandle, Board_LED0, FALSE);    // Turn led off
+                Clock_stop(clkHandle); // Stop clock interruptions
                 programState = WAITING_HOME;
             }
 
         }
 
-        // Sleep 100ms
-        Task_sleep(100000 / Clock_tickPeriod);
+        Task_sleep(10000 / Clock_tickPeriod);
     }
 
     // Program never gets here..
@@ -336,7 +336,7 @@ Void mpuSensorFxn(UArg arg0, UArg arg1) {
 
 Int main(void)
 {
-    uint16_t cycle = 1000; // milliseconds
+    uint16_t cycle = 20; // milliseconds
 
     // Task variables
     Task_Handle uartTaskHandle;
