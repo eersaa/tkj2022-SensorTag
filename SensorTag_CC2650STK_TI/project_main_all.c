@@ -169,68 +169,6 @@ Void uartTaskFxn(UArg arg0, UArg arg1)
     }
 }
 
-Void sensorTaskFxn(UArg arg0, UArg arg1)
-{
-
-    I2C_Handle i2c;
-    I2C_Params i2cParams;
-
-    // Alustetaan i2c-väylä
-    I2C_Params_init(&i2cParams);
-    i2cParams.bitRate = I2C_400kHz;
-
-
-
-    while (1)
-    {
-
-        // Read the ambient light sensor to variable
-        if (programState == WAITING_READ)
-        {
-            // Avataan yhteys
-            i2c = I2C_open(Board_I2C_TMP, &i2cParams);
-            if (i2c == NULL)
-            {
-                System_abort("Error Initializing I2C\n");
-            }
-
-            Task_sleep(100000 / Clock_tickPeriod);
-
-            //Initialize opt3001 light sensor
-            opt3001_setup(&i2c);
-
-            //Delay the data read to get successful reading
-            Task_sleep(1000000 / Clock_tickPeriod);
-
-            ambientLight = opt3001_get_data(&i2c);
-
-            I2C_close(i2c);
-
-            sprintf(merkkijono, "Sensor:%f\n", ambientLight);
-            System_printf(merkkijono);
-            System_flush();
-
-            //Check the state before update
-            if (programState == WAITING_READ) {
-                programState = READ_MPU;
-            } else {
-                programState = WAITING_HOME;
-            }
-
-        }
-        /*
-        //debug
-        sprintf(merkkijono,"programState %d\n",programState);
-        System_printf(merkkijono);
-        System_printf("SensorTask\n");
-        System_flush();
-        */
-
-        // Once per second, you can modify this
-        Task_sleep(1000000 / Clock_tickPeriod);
-    }
-}
-
 Void mpuSensorFxn(UArg arg0, UArg arg1) {
 
     float ax, ay, az, gx, gy, gz;
@@ -304,8 +242,6 @@ Int main(void)
 {
 
     // Task variables
-    Task_Handle sensorTaskHandle;
-    Task_Params sensorTaskParams;
     Task_Handle uartTaskHandle;
     Task_Params uartTaskParams;
     Task_Handle mpuTask;
@@ -347,16 +283,6 @@ Int main(void)
     }
 
     /* Task */
-    Task_Params_init(&sensorTaskParams);
-    sensorTaskParams.stackSize = STACKSIZE;
-    sensorTaskParams.stack = &sensorTaskStack;
-    sensorTaskParams.priority = 2;
-    sensorTaskHandle = Task_create(sensorTaskFxn, &sensorTaskParams, NULL);
-    if (sensorTaskHandle == NULL)
-    {
-        System_abort("Sensor task create failed!");
-    }
-
     Task_Params_init(&uartTaskParams);
     uartTaskParams.stackSize = STACKSIZE;
     uartTaskParams.stack = &uartTaskStack;
