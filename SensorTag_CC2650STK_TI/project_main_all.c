@@ -117,7 +117,7 @@ void buttonFxn(PIN_Handle handle, PIN_Id pinId)
 
         programState = WAITING_READ;
 
-    } else if (!programState == WRITE_UART){
+    } else if (programState != WRITE_UART){
 
         //Vaihdetaan ledin tila
         pinValue = 0;
@@ -313,10 +313,11 @@ Void mpuSensorFxn(UArg arg0, UArg arg1) {
             //Check the state and address limit before update
             if (programState == READ_MPU &&
                 dataPtr < &mpuData[sizeof(mpuData)/sizeof(mpuData[0])]) {
+                dataReady = TRUE;
 
                 programState = WAITING_READ;
             } else {
-                dataReady = TRUE;
+                PIN_setOutputValue(ledHandle, Board_LED0, FALSE);    // Turn led off
                 programState = WAITING_HOME;
             }
 
@@ -335,7 +336,7 @@ Void mpuSensorFxn(UArg arg0, UArg arg1) {
 
 Int main(void)
 {
-    uint16_t cycle = 500; // milliseconds
+    uint16_t cycle = 1000; // milliseconds
 
     // Task variables
     Task_Handle uartTaskHandle;
