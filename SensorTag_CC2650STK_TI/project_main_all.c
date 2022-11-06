@@ -180,8 +180,8 @@ Void uartTaskFxn(UArg arg0, UArg arg1)
         {
             // Print data as csv format
             sprintf(merkkijono, "timestamp,acc_x,acc_y,acc_z,gyro_x,gyro_y,gyro_z\n");
-            System_printf(merkkijono); // Column headers
-            System_flush();
+//            System_printf(merkkijono); // Column headers
+//            System_flush();
 
             // Write the string to uart
             sprintf(merkkijono, "%s\r", merkkijono);
@@ -199,8 +199,8 @@ Void uartTaskFxn(UArg arg0, UArg arg1)
                         dataPtr->gy,
                         dataPtr->gz
                         );
-                System_printf(merkkijono);
-                System_flush();
+//                System_printf(merkkijono);
+//                System_flush();
 
                 // Write the string to uart
                 sprintf(merkkijono, "%s\r", merkkijono);
