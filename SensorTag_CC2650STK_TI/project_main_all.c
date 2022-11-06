@@ -25,7 +25,6 @@
 
 /* Task */
 #define STACKSIZE 2048
-Char sensorTaskStack[STACKSIZE];
 Char uartTaskStack[STACKSIZE];
 Char mpuTaskStack[STACKSIZE];
 
@@ -78,6 +77,20 @@ static const I2CCC26XX_I2CPinCfg i2cMPUCfg = {
     .pinSDA = Board_I2C0_SDA1,
     .pinSCL = Board_I2C0_SCL1
 };
+
+// Define structure for mpu sensor datapoint
+struct dataPoint {
+    uint32_t timestamp;
+    float ax;
+    float ay;
+    float az;
+    float gx;
+    float gy;
+    float gz;
+};
+
+// Define array for datapoints
+struct dataPoint mpuData[200];
 
 // Napinpainalluksen keskeytyksen käsittelijäfunktio
 void buttonFxn(PIN_Handle handle, PIN_Id pinId)
@@ -172,6 +185,7 @@ Void uartTaskFxn(UArg arg0, UArg arg1)
 Void mpuSensorFxn(UArg arg0, UArg arg1) {
 
     float ax, ay, az, gx, gy, gz;
+    uint32_t firstTimeStamp // Timestamp of first datapoint
 
     I2C_Handle i2cMPU; // Own i2c-interface for MPU9250 sensor
     I2C_Params i2cMPUParams;
@@ -212,16 +226,13 @@ Void mpuSensorFxn(UArg arg0, UArg arg1) {
             // MPU ask data
             mpu9250_get_data(&i2cMPU, &ax, &ay, &az, &gx, &gy, &gz);
 
-            // MPU close i2c
-            I2C_close(i2cMPU);
-
             sprintf(merkkijono, "mpu:%+4.2f,%+4.2f,%+4.2f,%+4.2f,%+4.2f,%+4.2f\n", ax, ay, az, gx, gy, gz);
             System_printf(merkkijono);
             System_flush();
 
             //Check the state before update
             if (programState == READ_MPU) {
-                programState = WRITE_UART;
+                programState = WAITING_READ;
             } else {
                 programState = WAITING_HOME;
             }
