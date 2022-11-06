@@ -55,6 +55,10 @@ static PIN_Handle hBuzzer;
 static PIN_State sBuzzer;
 
 
+// RTOS:n kellomuuttujat
+static Clock_Handle clkHandle;
+static Clock_Params clkParams;
+
 // Pinnien alustukset, molemmille pinneille oma konfiguraatio
 // Vakio BOARD_BUTTON_0 vastaa toista painonappia
 PIN_Config buttonConfig[] = {
@@ -271,16 +275,33 @@ void buttonFxn(PIN_Handle handle, PIN_Id pinId)
 
         //Vaihdetaan ledin tila
         pinValue = 1;
+
+        // Start the clock interruption
+        Clock_start(clkHandle);
+
         programState = WAITING_READ;
 
     } else {
 
         //Vaihdetaan ledin tila
         pinValue = 0;
+
+        // Stop the clock interruption
+        Clock_stop(clkHandle);
+
         programState = WAITING_HOME;
     }
 
     PIN_setOutputValue(ledHandle, Board_LED0, pinValue);
+
+}
+
+// Kellokeskeytyksen käsittelijä
+void clkFxn(UArg arg0) {
+
+   if (programState == WAITING_READ) {
+    programState = READ_MPU;
+   }
 
 }
 
@@ -484,6 +505,7 @@ Void mpuSensorFxn(UArg arg0, UArg arg1) {
 
 Int main(void)
 {
+    uint8_t cycle = 100; // milliseconds
 
     // Task variables
     Task_Handle sensorTaskHandle;
@@ -502,6 +524,17 @@ Int main(void)
 
     // Initialize UART
     Board_initUART();
+
+    // Alustetaan kello
+    Clock_Params_init(&clkParams);
+    clkParams.period = cycle * 1000 / Clock_tickPeriod;
+    clkParams.startFlag = FALSE;
+
+    // Otetaan käyttöön ohjelmassa
+    clkHandle = Clock_create((Clock_FuncPtr)clkFxn, 1000000 / Clock_tickPeriod, &clkParams, NULL);
+    if (clkHandle == NULL) {
+       System_abort("Clock create failed");
+    }
 
     // Otetaan pinnit käyttöön ohjelmassa
     buttonHandle = PIN_open(&buttonState, buttonConfig);
