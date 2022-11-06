@@ -93,8 +93,11 @@ struct dataPoint {
     float gz;
 };
 
-// Define array for datapoints
-struct dataPoint mpuData[200];
+// Define variables for data capture
+struct dataPoint mpuData[5]; // Table for datapoints
+struct dataPoint *dataPtr; // Pointer for data writing
+uint32_t firstTimeStamp; // Timestamp of first datapoint
+int8_t timeStampSet = FALSE; // Flag to for remembering that recording started
 
 // Napinpainalluksen keskeytyksen käsittelijäfunktio
 void buttonFxn(PIN_Handle handle, PIN_Id pinId)
@@ -107,8 +110,10 @@ void buttonFxn(PIN_Handle handle, PIN_Id pinId)
         //Vaihdetaan ledin tila
         pinValue = 1;
 
-        // Start the clock interruption
-        Clock_start(clkHandle);
+        Clock_start(clkHandle); // Start the clock interruption
+        // Prepare for new data capture
+        timeStampSet = FALSE;
+        dataPtr = mpuData;
 
         programState = WAITING_READ;
 
@@ -131,7 +136,7 @@ void buttonFxn(PIN_Handle handle, PIN_Id pinId)
 void clkFxn(UArg arg0) {
 
    if (programState == WAITING_READ) {
-    programState = READ_MPU;
+       programState = READ_MPU;
    }
 
 }
@@ -205,9 +210,6 @@ Void uartTaskFxn(UArg arg0, UArg arg1)
 
 Void mpuSensorFxn(UArg arg0, UArg arg1) {
 
-    float ax, ay, az, gx, gy, gz;
-    uint32_t firstTimeStamp; // Timestamp of first datapoint
-
     I2C_Handle i2cMPU; // Own i2c-interface for MPU9250 sensor
     I2C_Params i2cMPUParams;
 
@@ -244,15 +246,40 @@ Void mpuSensorFxn(UArg arg0, UArg arg1) {
 
         if (programState == READ_MPU) {
 
-            // MPU ask data
-            mpu9250_get_data(&i2cMPU, &ax, &ay, &az, &gx, &gy, &gz);
+            if (!timeStampSet) {
+                firstTimeStamp = (Clock_getTicks()*Clock_tickPeriod)/1000; // In milliseconds
+                dataPtr->timestamp = 0;
+                timeStampSet = TRUE;
+            } else {
+                dataPtr->timestamp = (Clock_getTicks()*Clock_tickPeriod)/1000 - firstTimeStamp; // In milliseconds
+            }
 
-            sprintf(merkkijono, "mpu:%+4.2f,%+4.2f,%+4.2f,%+4.2f,%+4.2f,%+4.2f\n", ax, ay, az, gx, gy, gz);
+            // MPU ask data
+            mpu9250_get_data(&i2cMPU,
+                             &dataPtr->ax,
+                             &dataPtr->ay,
+                             &dataPtr->az,
+                             &dataPtr->gx,
+                             &dataPtr->gy,
+                             &dataPtr->gz
+                             );
+
+            sprintf(merkkijono, "mpu:%+4.2f,%+4.2f,%+4.2f,%+4.2f,%+4.2f,%+4.2f\n",
+                    dataPtr->ax,
+                    dataPtr->ay,
+                    dataPtr->az,
+                    dataPtr->gx,
+                    dataPtr->gy,
+                    dataPtr->gz
+                    );
             System_printf(merkkijono);
             System_flush();
 
-            //Check the state before update
-            if (programState == READ_MPU) {
+            dataPtr++; //Increase pointer address
+
+            //Check the state and address limit before update
+            if (programState == READ_MPU &&
+                    dataPtr < &mpuData[sizeof(mpuData)/sizeof(mpuData[0])]) {
                 programState = WAITING_READ;
             } else {
                 programState = WAITING_HOME;
@@ -273,7 +300,7 @@ Void mpuSensorFxn(UArg arg0, UArg arg1) {
 
 Int main(void)
 {
-    uint8_t cycle = 100; // milliseconds
+    uint16_t cycle = 1000; // milliseconds
 
     // Task variables
     Task_Handle uartTaskHandle;
