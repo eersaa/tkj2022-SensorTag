@@ -94,10 +94,11 @@ struct dataPoint {
 };
 
 // Define variables for data capture
-struct dataPoint mpuData[5]; // Table for datapoints
+struct dataPoint mpuData[100]; // Table for datapoints
 struct dataPoint *dataPtr; // Pointer for data writing
 uint32_t firstTimeStamp; // Timestamp of first datapoint
-int8_t timeStampSet = FALSE; // Flag to for remembering that recording started
+int8_t timeStampSet = FALSE; // Flag to for remembering that capture started
+int8_t dataReady = FALSE; // Flag to for remembering that capture done
 
 // Napinpainalluksen keskeytyksen käsittelijäfunktio
 void buttonFxn(PIN_Handle handle, PIN_Id pinId)
@@ -116,7 +117,7 @@ void buttonFxn(PIN_Handle handle, PIN_Id pinId)
 
         programState = WAITING_READ;
 
-    } else {
+    } else if (!programState == WRITE_UART){
 
         //Vaihdetaan ledin tila
         pinValue = 0;
@@ -173,22 +174,31 @@ Void uartTaskFxn(UArg arg0, UArg arg1)
         // Print out the sensor data to uart
         if (programState == WRITE_UART)
         {
+            // Print data as csv format
+            System_printf("timestamp,acc_x,acc_y,acc_z,gyro_x,gyro_y,gyro_z\n"); // Column headers
 
-            sprintf(merkkijono, "Uart:%f\n", ambientLight);
-            System_printf(merkkijono);
+            // Datapoints
+            for (dataPtr = mpuData; dataPtr < &mpuData[sizeof(mpuData)/sizeof(mpuData[0])]; ++dataPtr) {
+
+                sprintf(merkkijono, "%d,%4.2f,%4.2f,%4.2f,%4.2f,%4.2f,%4.2f\n",
+                        dataPtr->timestamp,
+                        dataPtr->ax,
+                        dataPtr->ay,
+                        dataPtr->az,
+                        dataPtr->gx,
+                        dataPtr->gy,
+                        dataPtr->gz
+                        );
+                System_printf(merkkijono);
+
+                // Write the string to uart
+                sprintf(merkkijono, "%s\r", merkkijono);
+                UART_write(uart, merkkijono, strlen(merkkijono));
+            }
+
             System_flush();
 
-            // Write the string to uart
-            sprintf(merkkijono, "%s\r", merkkijono);
-            UART_write(uart, merkkijono, strlen(merkkijono));
-
-
-            //Check the state before update
-            if (programState == WRITE_UART) {
-                programState = WAITING_READ;
-            } else {
-                programState = WAITING_HOME;
-            }
+            programState = WAITING_HOME;
 
         }
         /*
@@ -203,7 +213,7 @@ Void uartTaskFxn(UArg arg0, UArg arg1)
          */
 
         // Once per second, you can modify this
-        Task_sleep(100000 / Clock_tickPeriod);
+        Task_sleep(1000000 / Clock_tickPeriod);
     }
 }
 
@@ -276,16 +286,17 @@ Void mpuSensorFxn(UArg arg0, UArg arg1) {
                              &dataPtr->gz
                              );
 
-            sprintf(merkkijono, "mpu:%+4.2f,%+4.2f,%+4.2f,%+4.2f,%+4.2f,%+4.2f\n",
-                    dataPtr->ax,
-                    dataPtr->ay,
-                    dataPtr->az,
-                    dataPtr->gx,
-                    dataPtr->gy,
-                    dataPtr->gz
-                    );
-            System_printf(merkkijono);
-            System_flush();
+//            // Debug
+//            sprintf(merkkijono, "mpu:%+4.2f,%+4.2f,%+4.2f,%+4.2f,%+4.2f,%+4.2f\n",
+//                    dataPtr->ax,
+//                    dataPtr->ay,
+//                    dataPtr->az,
+//                    dataPtr->gx,
+//                    dataPtr->gy,
+//                    dataPtr->gz
+//                    );
+//            System_printf(merkkijono);
+//            System_flush();
 
             dataPtr++; //Increase pointer address
 
@@ -312,7 +323,7 @@ Void mpuSensorFxn(UArg arg0, UArg arg1) {
 
 Int main(void)
 {
-    uint16_t cycle = 1000; // milliseconds
+    uint16_t cycle = 500; // milliseconds
 
     // Task variables
     Task_Handle uartTaskHandle;
