@@ -17,11 +17,12 @@
 #include <ti/drivers/power/PowerCC26XX.h>
 #include <ti/drivers/UART.h>
 
-/* Board Header files */
+/* Board and peripheral Header files */
 #include "Board.h"
 #include "wireless/comm_lib.h"
 #include "sensors/opt3001.h"
 #include "sensors/mpu9250.h"
+#include "peripherals/buzzer.h"
 
 /* Task */
 #define STACKSIZE 2048
@@ -35,7 +36,7 @@ enum state
     WAITING_HOME = 1, //
     WAITING_READ,   // Waiting the time interruption to read the MPU sensor
     READ_MPU,       // Reads the MPU sensor
-    WRITE_UART      // Write data to UART
+    WRITE_UART     // Write data to UART
 };
 enum state programState = WAITING_HOME;
 
@@ -48,6 +49,9 @@ static PIN_Handle buttonHandle;
 static PIN_State buttonState;
 static PIN_Handle ledHandle;
 static PIN_State ledState;
+static PIN_Handle hBuzzer;
+static PIN_State sBuzzer;
+
 
 // Pinnien alustukset, molemmille pinneille oma konfiguraatio
 // Vakio BOARD_BUTTON_0 vastaa toista painonappia
@@ -62,6 +66,12 @@ PIN_Config ledConfig[] = {
 Board_LED0 | PIN_GPIO_OUTPUT_EN | PIN_GPIO_LOW | PIN_PUSHPULL | PIN_DRVSTR_MAX,
                            PIN_TERMINATE // Asetustaulukko lopetetaan aina tällä vakiolla
         };
+
+// Pin config for buzzer
+PIN_Config cBuzzer[] = {
+  Board_BUZZER | PIN_GPIO_OUTPUT_EN | PIN_GPIO_LOW | PIN_PUSHPULL | PIN_DRVSTR_MAX,
+  PIN_TERMINATE
+};
 
 // MPU power pin global variables
 static PIN_Handle hMpuPin;
@@ -78,6 +88,12 @@ static const I2CCC26XX_I2CPinCfg i2cMPUCfg = {
     .pinSDA = Board_I2C0_SDA1,
     .pinSCL = Board_I2C0_SCL1
 };
+
+// Function prototypes
+
+// Make beep sound with buzzer
+// Durations in milliseconds
+void buzzerBeep(uint16_t beepDuration, uint16_t pauseDuration, uint16_t beeps);
 
 // Napinpainalluksen keskeytyksen käsittelijäfunktio
 void buttonFxn(PIN_Handle handle, PIN_Id pinId)
@@ -339,6 +355,12 @@ Int main(void)
         System_abort("Pin open failed!");
     }
 
+    // Buzzer
+    hBuzzer = PIN_open(&sBuzzer, cBuzzer);
+    if (hBuzzer == NULL) {
+      System_abort("Buzzer pin open failed!");
+    }
+
     // Asetetaan painonappi-pinnille keskeytyksen käsittelijäksi
     // funktio buttonFxn
     if (PIN_registerIntCb(buttonHandle, &buttonFxn) != 0)
@@ -385,4 +407,17 @@ Int main(void)
     BIOS_start();
 
     return (0);
+}
+
+void buzzerBeep(uint16_t beepDuration, uint16_t pauseDuration, uint16_t beeps) {
+    uint16_t *var = &beeps;
+    for (; *var > 0; --*var) {
+        buzzerOpen(hBuzzer);
+        buzzerSetFrequency(1500);
+        Task_sleep(beepDuration * 1000 / Clock_tickPeriod);
+        buzzerClose();
+
+        Task_sleep(pauseDuration * 1000 / Clock_tickPeriod);
+    }
+
 }
