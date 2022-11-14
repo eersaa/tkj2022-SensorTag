@@ -37,4 +37,4 @@ RemoteSystemsTempFiles
 Debug
 .jxbrowser.userdata
 *.launches
-*src
+SensorTag_CC2650STK_TI/*src
