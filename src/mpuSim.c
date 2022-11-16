@@ -35,7 +35,7 @@ int parseStruct(char *str, struct dataPoint *dataPoint) {
    
     // Separate the first part and save to structure
     token = strtok(str, sep);
-    dataPoint->timestamp = (uint32_t)*token;
+    dataPoint->timestamp = (uint32_t)strtol(*token);
 
     // Separate rest of the parts
     while( token != NULL ) {
@@ -45,33 +45,39 @@ int parseStruct(char *str, struct dataPoint *dataPoint) {
 
         if (i == 0)
         {
-            dataPoint->ax = (float)*token;
+            dataPoint->ax = (float)strtof(*token);
             i++;
         }
         else if (i == 1)
         {
-            dataPoint->ay = (float)*token;
+            dataPoint->ay = (float)strtof(*token);
             i++;
         }
         else if (i == 2)
         {
-            dataPoint->az = (float)*token;
+            dataPoint->az = (float)strtof(*token);
             i++;
         }
         else if (i == 3)
         {
-            dataPoint->gx = (float)*token;
+            dataPoint->gx = (float)strtof(*token);
             i++;
         }
         else if (i == 4)
         {
-            dataPoint->gy = (float)*token;
+            dataPoint->gy = (float)strtof(*token);
             i++;
         }
         else if (i == 5)
         {
-            dataPoint->gz = (float)*token;
+            dataPoint->gz = (float)strtof(*token);
             i++;
-        }      
+        }
     }
+
+    if (i < 5)
+    {
+        /* code */
+    }
+    
 }
