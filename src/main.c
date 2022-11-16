@@ -3,6 +3,6 @@
 
 int main(int argc, char const *argv[])
 {
-    /* code */
-    return 0;
+    int t = init_data();
+    return t;
 }
