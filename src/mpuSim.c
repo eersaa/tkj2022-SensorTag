@@ -2,8 +2,11 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <stdbool.h>
 
 #include "mpuSim.h"
+
+#define MAXCHAR 50
 
 // Define structure for mpu sensor datapoint
 struct dataPoint {
@@ -18,6 +21,7 @@ struct dataPoint {
 
 // Local Prototypes
 int parseStruct(char *str, struct dataPoint *dataPoint);
+int readDataToArray(char *path, struct dataPoint *dataPoint, uint struct_len);
 
 int init_data(void) {
     return 0;
@@ -86,4 +90,35 @@ int parseStruct(char *str, struct dataPoint *dataPoint) {
     }
     
     
+}
+
+// Read csv file to structured array
+int readDataToArray(char *path, struct dataPoint *dataPoint, uint sizeofArray) {
+    FILE *fp;
+    char row[MAXCHAR];
+    struct dataPoint *endptr;
+    if (sizeofArray == 0)
+    {
+        printf ("Size of array needs to be greater than zero");
+        return -1;
+    }
+    
+    endptr = dataPoint + sizeofArray - 1;
+
+    fp = fopen(path,"r");
+    // Read the header row
+    fgets(row, MAXCHAR, fp);
+
+    while (feof(fp) != true &&
+            dataPoint < endptr + 1)
+    {
+        // Read first data row
+        fgets(row, MAXCHAR, fp);
+        printf("Row: %s\n", row);
+
+        if (parseStruct(row, dataPoint))
+        {
+            dataPoint++;
+        }
+    }
 }
