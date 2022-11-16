@@ -121,4 +121,6 @@ int readDataToArray(char *path, struct dataPoint *dataPoint, uint sizeofArray) {
             dataPoint++;
         }
     }
+
+    return 0;
 }
