@@ -17,13 +17,24 @@ struct dataPoint {
     float gx;
     float gy;
     float gz;
-} exe_data[250];
+} pet_data[250];
 
 // Local Prototypes
 int parseStruct(char *str, struct dataPoint *dataPoint);
-int readDataToArray(char *path, struct dataPoint *dataPoint, uint struct_len);
+int readDataToArray(char *path, struct dataPoint *dataPoint, uint structLen);
 
+// Initializes the data to arrays
 int init_data(void) {
+    if (readDataToArray("../misc/pet_swinging1.csv", pet_data, sizeof(pet_data)/sizeof(pet_data[0])))
+    {
+        printf("Initializing pet data failed\n");
+        return -1;
+    }
+    else
+    {
+        return 0;
+    }
+    
     return 0;
 }
 
@@ -36,76 +47,105 @@ int parseStruct(char *str, struct dataPoint *dataPoint) {
     const char sep[] = ",";
     int i = 0;
     char *token; // Pointer to current location
-   
-    // Separate the first part and save to structure
-    token = strtok(str, sep);
-    dataPoint->timestamp = (uint32_t)strtoul(token, 0, 10);
+    char *p;
 
-    // Separate rest of the parts
-    while( token != NULL ) {
-        printf("%s\n",token);
-
-        token = strtok(NULL, sep);
-
-        if (i == 0)
-        {
-            dataPoint->ax = (float)strtof(token, 0);
-            i++;
-        }
-        else if (i == 1)
-        {
-            dataPoint->ay = (float)strtof(token, 0);
-            i++;
-        }
-        else if (i == 2)
-        {
-            dataPoint->az = (float)strtof(token, 0);
-            i++;
-        }
-        else if (i == 3)
-        {
-            dataPoint->gx = (float)strtof(token, 0);
-            i++;
-        }
-        else if (i == 4)
-        {
-            dataPoint->gy = (float)strtof(token, 0);
-            i++;
-        }
-        else if (i == 5)
-        {
-            dataPoint->gz = (float)strtof(token, 0);
-            i++;
-        }
+    // Replace the newline character with the null character if found
+    p = strchr(str, '\n');
+    if (p) {
+      *p = '\0';
     }
 
-    if (i < 5)
+        // Separate the first part and test            
+    token = strtok(str, sep);
+    if (token != NULL)
     {
-        printf ("Not all data objects found");
-        return 1;
+        // Save timestamp to structure
+        dataPoint->timestamp = (uint32_t)strtoul(token, 0, 10);
+
+        // Separate rest of the parts
+        while( token != NULL ) {
+            //printf("%s\n",token);
+
+            token = strtok(NULL, sep);
+
+
+            if (i == 0)
+            {
+                dataPoint->ax = (float)strtof(token, 0);
+                i++;
+            }
+            else if (i == 1)
+            {
+                dataPoint->ay = (float)strtof(token, 0);
+                i++;
+            }
+            else if (i == 2)
+            {
+                dataPoint->az = (float)strtof(token, 0);
+                i++;
+            }
+            else if (i == 3)
+            {
+                dataPoint->gx = (float)strtof(token, 0);
+                i++;
+            }
+            else if (i == 4)
+            {
+                dataPoint->gy = (float)strtof(token, 0);
+                i++;
+            }
+            else if (i == 5)
+            {
+                dataPoint->gz = (float)strtof(token, 0);
+                i++;
+            }
+        }
+
+        if (i < 5)
+        {
+            printf ("Not all data objects found\n");
+            return 1;
+        }
+        else
+        {
+            return 0;
+        }
     }
     else
     {
-        return 0;
+        printf("Empty line\n");
+        return 1;
     }
+    
+    
+   
+    
     
     
 }
 
 // Read csv file to structured array
-int readDataToArray(char *path, struct dataPoint *dataPoint, uint sizeofArray) {
+int readDataToArray(char *path, struct dataPoint *dataPoint, uint structLen) {
     FILE *fp;
     char row[MAXCHAR];
     struct dataPoint *endptr;
-    if (sizeofArray == 0)
+    if (structLen == 0)
     {
-        printf ("Size of array needs to be greater than zero");
+        printf ("Size of array needs to be greater than zero\n");
         return -1;
     }
     
-    endptr = dataPoint + sizeofArray - 1;
+    endptr = dataPoint + structLen - 1;
 
     fp = fopen(path,"r");
+    // Test that file opened succesfully
+    if (fp == NULL)
+    {
+        printf("Cannot open file\n");
+        return -1;
+    }
+    
+
     // Read the header row
     fgets(row, MAXCHAR, fp);
 
@@ -118,8 +158,13 @@ int readDataToArray(char *path, struct dataPoint *dataPoint, uint sizeofArray) {
 
         if (parseStruct(row, dataPoint))
         {
+            break;
+        }
+        else
+        {
             dataPoint++;
         }
+        
     }
 
     return 0;
