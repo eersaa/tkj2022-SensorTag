@@ -25,7 +25,7 @@ struct dataPoint *pet_data_ptr = &pet_data;
 // Local Prototypes
 int parseStruct(char *str, struct dataPoint *dataPoint);
 int readDataToArray(char *path, struct dataPoint *dataPoint, uint tableLen);
-int get_x_data(struct dataPoint *dataTable, struct dataPoint *dataPoint, struct dataPoint *nextdp, uint tableLen);
+int get_x_data(struct dataPoint *dataTable, struct dataPoint *nextdp, uint tableLen, struct dataPoint *dataPoint);
 
 // Initializes the data to arrays
 int init_data(void) {
@@ -166,4 +166,22 @@ int readDataToArray(char *path, struct dataPoint *dataPoint, uint tableLen) {
     }
 
     return 0;
+}
+
+int get_x_data(struct dataPoint *dataTable, struct dataPoint *nextdp, uint tableLen, struct dataPoint *dataPoint) {
+
+    // Get the end pointer
+    const struct dataPoint *endptr = dataTable + tableLen - 1;
+
+    // Check that pointer can move one step forward
+    if ((dataPoint + 1) <= endptr)
+    {
+        nextdp = dataPoint + 1;
+    }
+    // Else move to start
+    else
+    {
+        nextdp = dataTable;
+    }
+    
 }
