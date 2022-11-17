@@ -19,9 +19,13 @@ struct dataPoint {
     float gz;
 } pet_data[250];
 
+// Pointer to walk trough the data tables 
+struct dataPoint *pet_data_ptr = &pet_data;
+
 // Local Prototypes
 int parseStruct(char *str, struct dataPoint *dataPoint);
-int readDataToArray(char *path, struct dataPoint *dataPoint, uint structLen);
+int readDataToArray(char *path, struct dataPoint *dataPoint, uint tableLen);
+int get_x_data(struct dataPoint *dataTable, struct dataPoint *dataPoint, struct dataPoint *nextdp, uint tableLen);
 
 // Initializes the data to arrays
 int init_data(void) {
@@ -116,29 +120,23 @@ int parseStruct(char *str, struct dataPoint *dataPoint) {
         printf("Empty line\n");
         return 1;
     }
-    
-    
-   
-    
-    
-    
 }
 
 // Read csv file to structured array
-int readDataToArray(char *path, struct dataPoint *dataPoint, uint structLen) {
+int readDataToArray(char *path, struct dataPoint *dataPoint, uint tableLen) {
     FILE *fp;
     char row[MAXCHAR];
     struct dataPoint *endptr;
-    if (structLen == 0)
+    if (tableLen == 0)
     {
         printf ("Size of array needs to be greater than zero\n");
         return -1;
     }
     
-    endptr = dataPoint + structLen - 1;
+    endptr = dataPoint + tableLen - 1;
 
     fp = fopen(path,"r");
-    // Test that file opened succesfully
+    // Test that file opened successfully
     if (fp == NULL)
     {
         printf("Cannot open file\n");
