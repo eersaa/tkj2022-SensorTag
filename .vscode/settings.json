@@ -1,5 +1,10 @@
 {
     "files.associations": {
         "stdio.h": "c"
-    }
+    },
+    "cSpell.words": [
+        "datapoint",
+        "MAXCHAR",
+        "nextdp"
+    ]
 }
