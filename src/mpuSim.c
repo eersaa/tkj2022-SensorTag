@@ -17,7 +17,7 @@ struct dataPoint {
     float gx;
     float gy;
     float gz;
-} pet_data[250];
+} pet_data[200];
 
 // Pointer to walk trough the data tables 
 struct dataPoint *pet_data_ptr = &pet_data[0];
@@ -26,6 +26,22 @@ struct dataPoint *pet_data_ptr = &pet_data[0];
 int parseStruct(char *str, struct dataPoint *dataPoint);
 int readDataToArray(char *path, struct dataPoint *dataPoint, uint tableLen);
 int get_x_data(struct dataPoint *dataTable, struct dataPoint *nextdp, uint tableLen, struct dataPoint *dataPoint);
+
+
+void get_pet_data(float *ax, float *ay, float *az, float *gx, float *gy, float *gz) {
+    // Define temporary pointer for data
+    struct dataPoint *tdp = 0;
+
+    get_x_data(&pet_data[0], pet_data_ptr, sizeof(pet_data)/sizeof(pet_data[0]), tdp);
+
+    *ax = tdp->ax;
+    *ay = tdp->ay;
+    *az = tdp->az;
+    *gx = tdp->gx;
+    *gy = tdp->gy;
+    *gz = tdp->gz;
+
+}
 
 // Initializes the data to arrays
 int init_data(void) {
@@ -42,9 +58,6 @@ int init_data(void) {
     return 0;
 }
 
-void mpu_get_data(float *ax, float *ay, float *az, float *gx, float *gy, float *gz) {
-    ;
-}
 
 // Parse one data line to structure
 int parseStruct(char *str, struct dataPoint *dataPoint) {
@@ -176,8 +189,8 @@ int get_x_data(struct dataPoint *dataTable, struct dataPoint *nextdp, uint table
     // Check that pointer can move one step forward
     if ((dataPoint + 1) <= endptr)
     {
-        nextdp = dataPoint + 1;
-        dataPoint = nextdp - 1;
+        dataPoint = nextdp;
+        nextdp = nextdp + 1;
         return 0;
     }
     // Else move to start
