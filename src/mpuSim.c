@@ -20,7 +20,7 @@ struct dataPoint {
 } pet_data[250];
 
 // Pointer to walk trough the data tables 
-struct dataPoint *pet_data_ptr = &pet_data;
+struct dataPoint *pet_data_ptr = &pet_data[0];
 
 // Local Prototypes
 int parseStruct(char *str, struct dataPoint *dataPoint);
@@ -171,17 +171,20 @@ int readDataToArray(char *path, struct dataPoint *dataPoint, uint tableLen) {
 int get_x_data(struct dataPoint *dataTable, struct dataPoint *nextdp, uint tableLen, struct dataPoint *dataPoint) {
 
     // Get the end pointer
-    const struct dataPoint *endptr = dataTable + tableLen - 1;
+    struct dataPoint const *endptr = dataTable + tableLen - 1;
 
     // Check that pointer can move one step forward
     if ((dataPoint + 1) <= endptr)
     {
         nextdp = dataPoint + 1;
+        dataPoint = nextdp - 1;
+        return 0;
     }
     // Else move to start
     else
     {
         nextdp = dataTable;
+        dataPoint = (struct dataPoint *)endptr; // Cast the constant to variable
+        return 0;
     }
-    
 }
