@@ -17,7 +17,7 @@ struct dataPoint {
     float gx;
     float gy;
     float gz;
-} pet_data[200];
+} pet_data[5];
 
 // Pointer to walk trough the data tables 
 struct dataPoint *pet_data_ptr = &pet_data[0];
@@ -25,14 +25,14 @@ struct dataPoint *pet_data_ptr = &pet_data[0];
 // Local Prototypes
 int parseStruct(char *str, struct dataPoint *dataPoint);
 int readDataToArray(char *path, struct dataPoint *dataPoint, uint tableLen);
-int get_x_data(struct dataPoint *dataTable, struct dataPoint *nextdp, uint tableLen, struct dataPoint *dataPoint);
+int get_x_data(struct dataPoint *dataTable, struct dataPoint **nextdp, uint tableLen, struct dataPoint **dataPoint);
 
 
 void get_pet_data(float *ax, float *ay, float *az, float *gx, float *gy, float *gz) {
     // Define temporary pointer for data
-    struct dataPoint *tdp = 0;
+    struct dataPoint *tdp = NULL;
 
-    get_x_data(&pet_data[0], pet_data_ptr, sizeof(pet_data)/sizeof(pet_data[0]), tdp);
+    get_x_data(&pet_data[0], &pet_data_ptr, sizeof(pet_data)/sizeof(pet_data[0]), &tdp);
 
     *ax = tdp->ax;
     *ay = tdp->ay;
@@ -181,23 +181,23 @@ int readDataToArray(char *path, struct dataPoint *dataPoint, uint tableLen) {
     return 0;
 }
 
-int get_x_data(struct dataPoint *dataTable, struct dataPoint *nextdp, uint tableLen, struct dataPoint *dataPoint) {
+int get_x_data(struct dataPoint *dataTable, struct dataPoint **nextdp, uint tableLen, struct dataPoint **dataPoint) {
 
     // Get the end pointer
     struct dataPoint const *endptr = dataTable + tableLen - 1;
 
     // Check that pointer can move one step forward
-    if ((dataPoint + 1) <= endptr)
+    if ((*nextdp + 1) <= endptr)
     {
-        dataPoint = nextdp;
-        nextdp = nextdp + 1;
+        *dataPoint = *nextdp;
+        *nextdp = *nextdp + 1;
         return 0;
     }
     // Else move to start
     else
     {
-        nextdp = dataTable;
-        dataPoint = (struct dataPoint *)endptr; // Cast the constant to variable
+        *nextdp = dataTable;
+        *dataPoint = (struct dataPoint *)endptr; // Cast the constant to variable
         return 0;
     }
 }
