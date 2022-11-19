@@ -23,8 +23,6 @@ int main(int argc, char const *argv[])
     {
         get_pet_data(&ax, &ay, &az, &gx, &gy, &gz);
 
-        printf("Data: %4.2f,%4.2f,%4.2f,%4.2f,%4.2f,%4.2f\n", ax, ay, az, gx, gy, gz);
-
         sleep(1);
     }
     
