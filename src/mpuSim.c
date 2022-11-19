@@ -95,7 +95,7 @@ int init_data(void) {
         return -1;
     }
 
-    if (readDataToArray("../misc/exe_data.csv", exe_data, sizeof(exe_data)/sizeof(exe_data[0])))
+    if (readDataToArray("../misc/exercise_data.csv", exe_data, sizeof(exe_data)/sizeof(exe_data[0])))
     {
         printf("Initializing exercise data failed\n");
         return -1;
