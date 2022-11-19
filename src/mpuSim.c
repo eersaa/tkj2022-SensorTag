@@ -41,11 +41,13 @@ void get_pet_data(float *ax, float *ay, float *az, float *gx, float *gy, float *
     *gy = tdp->gy;
     *gz = tdp->gz;
 
+    printf("pet_data: %4.2f,%4.2f,%4.2f,%4.2f,%4.2f,%4.2f\n", *ax, *ay, *az, *gx, *gy, *gz);
+
 }
 
 // Initializes the data to arrays
 int init_data(void) {
-    if (readDataToArray("../misc/pet_swinging1.csv", pet_data, sizeof(pet_data)/sizeof(pet_data[0])))
+    if (readDataToArray("../misc/pet_data.csv", pet_data, sizeof(pet_data)/sizeof(pet_data[0])))
     {
         printf("Initializing pet data failed\n");
         return -1;
@@ -196,8 +198,9 @@ int get_x_data(struct dataPoint *dataTable, struct dataPoint **nextdp, uint tabl
     // Else move to start
     else
     {
+        *dataPoint = *nextdp;
         *nextdp = dataTable;
-        *dataPoint = (struct dataPoint *)endptr; // Cast the constant to variable
+        printf("Reached last datapoint. Moving to table begin next call\n");
         return 0;
     }
 }
