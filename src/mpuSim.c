@@ -17,7 +17,7 @@ struct dataPoint {
     float gx;
     float gy;
     float gz;
-} pet_data[5], eat_data[5], exe_data[5];
+} pet_data[165], eat_data[176], exe_data[202];
 
 // Pointers to walk trough the data tables 
 struct dataPoint *pet_data_ptr = &pet_data[0];
