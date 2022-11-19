@@ -28,7 +28,8 @@ int main(int argc, char const *argv[])
         // Call exercise data
         get_exe_data(&ax, &ay, &az, &gx, &gy, &gz);
 
-        sleep(1);
+        sleep(1); // Time in seconds 2 = two seconds, 0.2 = 200 milliseconds
+
     }
     
 }
