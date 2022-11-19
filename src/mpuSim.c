@@ -211,7 +211,7 @@ int readDataToArray(char *path, struct dataPoint *dataPoint, uint tableLen) {
     {
         // Read first data row
         fgets(row, MAXCHAR, fp);
-        printf("Row: %s\n", row);
+        // printf("Row: %s\n", row);
 
         if (parseStruct(row, dataPoint))
         {
