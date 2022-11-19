@@ -21,7 +21,10 @@ int main(int argc, char const *argv[])
     // Loop forever
     while (1)
     {
+        // Call pet data
         get_pet_data(&ax, &ay, &az, &gx, &gy, &gz);
+        // Call eat data
+        get_eat_data(&ax, &ay, &az, &gx, &gy, &gz);
 
         sleep(1);
     }
