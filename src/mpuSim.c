@@ -17,11 +17,12 @@ struct dataPoint {
     float gx;
     float gy;
     float gz;
-} pet_data[5], eat_data[5];
+} pet_data[5], eat_data[5], exe_data[5];
 
 // Pointers to walk trough the data tables 
 struct dataPoint *pet_data_ptr = &pet_data[0];
 struct dataPoint *eat_data_ptr = &eat_data[0];
+struct dataPoint *exe_data_ptr = &exe_data[0];
 
 // Local Prototypes
 int parseStruct(char *str, struct dataPoint *dataPoint);
@@ -63,6 +64,23 @@ void get_eat_data(float *ax, float *ay, float *az, float *gx, float *gy, float *
 
 }
 
+void get_exe_data(float *ax, float *ay, float *az, float *gx, float *gy, float *gz) {
+    // Define temporary pointer for data
+    struct dataPoint *tdp = NULL;
+
+    get_x_data(&exe_data[0], &exe_data_ptr, sizeof(exe_data)/sizeof(exe_data[0]), &tdp);
+
+    *ax = tdp->ax;
+    *ay = tdp->ay;
+    *az = tdp->az;
+    *gx = tdp->gx;
+    *gy = tdp->gy;
+    *gz = tdp->gz;
+
+    printf("exe_data: %4.2f,%4.2f,%4.2f,%4.2f,%4.2f,%4.2f\n", *ax, *ay, *az, *gx, *gy, *gz);
+
+}
+
 // Initializes the data to arrays
 int init_data(void) {
     if (readDataToArray("../misc/pet_data.csv", pet_data, sizeof(pet_data)/sizeof(pet_data[0])))
@@ -74,6 +92,12 @@ int init_data(void) {
     if (readDataToArray("../misc/eat_data.csv", eat_data, sizeof(eat_data)/sizeof(eat_data[0])))
     {
         printf("Initializing eat data failed\n");
+        return -1;
+    }
+
+    if (readDataToArray("../misc/exe_data.csv", exe_data, sizeof(exe_data)/sizeof(exe_data[0])))
+    {
+        printf("Initializing exercise data failed\n");
         return -1;
     }
     

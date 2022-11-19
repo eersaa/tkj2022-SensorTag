@@ -10,3 +10,6 @@ void get_pet_data(float *ax, float *ay, float *az, float *gx, float *gy, float *
 
 // Get data from eat table
 void get_eat_data(float *ax, float *ay, float *az, float *gx, float *gy, float *gz);
+
+// Get data from exercise table
+void get_exe_data(float *ax, float *ay, float *az, float *gx, float *gy, float *gz);
