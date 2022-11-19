@@ -30,7 +30,7 @@ int readDataToArray(char *path, struct dataPoint *dataPoint, uint tableLen);
 int get_x_data(struct dataPoint *dataTable, struct dataPoint **nextdp, uint tableLen, struct dataPoint **dataPoint);
 
 
-void get_pet_data(float *ax, float *ay, float *az, float *gx, float *gy, float *gz) {
+int get_pet_data(float *ax, float *ay, float *az, float *gx, float *gy, float *gz) {
     // Define temporary pointer for data
     struct dataPoint *tdp = NULL;
 
@@ -43,11 +43,13 @@ void get_pet_data(float *ax, float *ay, float *az, float *gx, float *gy, float *
     *gy = tdp->gy;
     *gz = tdp->gz;
 
-    printf("pet_data: %4.2f,%4.2f,%4.2f,%4.2f,%4.2f,%4.2f\n", *ax, *ay, *az, *gx, *gy, *gz);
+    //printf("pet_data: %4.2f,%4.2f,%4.2f,%4.2f,%4.2f,%4.2f\n", *ax, *ay, *az, *gx, *gy, *gz);
+
+    return tdp->timestamp;
 
 }
 
-void get_eat_data(float *ax, float *ay, float *az, float *gx, float *gy, float *gz) {
+int get_eat_data(float *ax, float *ay, float *az, float *gx, float *gy, float *gz) {
     // Define temporary pointer for data
     struct dataPoint *tdp = NULL;
 
@@ -60,11 +62,13 @@ void get_eat_data(float *ax, float *ay, float *az, float *gx, float *gy, float *
     *gy = tdp->gy;
     *gz = tdp->gz;
 
-    printf("eat_data: %4.2f,%4.2f,%4.2f,%4.2f,%4.2f,%4.2f\n", *ax, *ay, *az, *gx, *gy, *gz);
+    //printf("eat_data: %4.2f,%4.2f,%4.2f,%4.2f,%4.2f,%4.2f\n", *ax, *ay, *az, *gx, *gy, *gz);
+
+    return tdp->timestamp;
 
 }
 
-void get_exe_data(float *ax, float *ay, float *az, float *gx, float *gy, float *gz) {
+int get_exe_data(float *ax, float *ay, float *az, float *gx, float *gy, float *gz) {
     // Define temporary pointer for data
     struct dataPoint *tdp = NULL;
 
@@ -77,7 +81,9 @@ void get_exe_data(float *ax, float *ay, float *az, float *gx, float *gy, float *
     *gy = tdp->gy;
     *gz = tdp->gz;
 
-    printf("exe_data: %4.2f,%4.2f,%4.2f,%4.2f,%4.2f,%4.2f\n", *ax, *ay, *az, *gx, *gy, *gz);
+    //printf("exe_data: %4.2f,%4.2f,%4.2f,%4.2f,%4.2f,%4.2f\n", *ax, *ay, *az, *gx, *gy, *gz);
+
+    return tdp->timestamp;
 
 }
 
