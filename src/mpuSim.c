@@ -45,6 +45,7 @@ int get_pet_data(float *ax, float *ay, float *az, float *gx, float *gy, float *g
 
     //printf("pet_data: %4.2f,%4.2f,%4.2f,%4.2f,%4.2f,%4.2f\n", *ax, *ay, *az, *gx, *gy, *gz);
 
+    // Return the timestamp of datapoint
     return tdp->timestamp;
 
 }
@@ -64,6 +65,7 @@ int get_eat_data(float *ax, float *ay, float *az, float *gx, float *gy, float *g
 
     //printf("eat_data: %4.2f,%4.2f,%4.2f,%4.2f,%4.2f,%4.2f\n", *ax, *ay, *az, *gx, *gy, *gz);
 
+    // Return the timestamp of datapoint
     return tdp->timestamp;
 
 }
@@ -83,6 +85,7 @@ int get_exe_data(float *ax, float *ay, float *az, float *gx, float *gy, float *g
 
     //printf("exe_data: %4.2f,%4.2f,%4.2f,%4.2f,%4.2f,%4.2f\n", *ax, *ay, *az, *gx, *gy, *gz);
 
+    // Return the timestamp of datapoint
     return tdp->timestamp;
 
 }
