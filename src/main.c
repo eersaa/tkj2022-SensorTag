@@ -65,9 +65,12 @@ int main(int argc, char const *argv[])
         {
             data[i] = data[i+1];
         }
-        get_eat_data(&ax, &ay, &az, &gx, &gy, &gz);
+        int timestamp = 0;
+        timestamp = get_eat_data(&ax, &ay, &az, &gx, &gy, &gz);
         // Last index
         data[sizeof(data)/sizeof(data[0]) - 1] = gy;
+
+        printf("%d\t", timestamp);
 
         usleep(50 * 1000); // Time in milliseconds * 1000.
 
