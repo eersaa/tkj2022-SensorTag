@@ -89,11 +89,25 @@ static const I2CCC26XX_I2CPinCfg i2cMPUCfg = {
     .pinSCL = Board_I2C0_SCL1
 };
 
+// Define structure for activity data
+struct activity {
+    uint8_t eat;
+    uint8_t exercixe;
+    uint8_t pet;
+};
+
+// Define global variable for activity data
+struct activity activity = {0, 0, 0};
+
 // Function prototypes
 
 // Make beep sound with buzzer
 // Durations in milliseconds
 void buzzerBeep(uint16_t beepDuration, uint16_t pauseDuration, uint16_t beeps);
+
+// Create message to be sent to host
+void createMessage(struct activity *activity, char *message);
+
 
 // Napinpainalluksen keskeytyksen käsittelijäfunktio
 void buttonFxn(PIN_Handle handle, PIN_Id pinId)
@@ -419,5 +433,9 @@ void buzzerBeep(uint16_t beepDuration, uint16_t pauseDuration, uint16_t beeps) {
 
         Task_sleep(pauseDuration * 1000 / Clock_tickPeriod);
     }
+
+}
+
+void createMessage(struct activity *activity, char *message) {
 
 }
