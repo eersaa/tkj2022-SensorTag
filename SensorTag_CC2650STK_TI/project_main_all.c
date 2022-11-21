@@ -30,6 +30,8 @@ Char sensorTaskStack[STACKSIZE];
 Char uartTaskStack[STACKSIZE];
 Char mpuTaskStack[STACKSIZE];
 
+#define B_MAX_LEN 80    // Define maximum length for buffer.
+
 // Definition of the state machine states
 enum state
 {
@@ -92,7 +94,7 @@ static const I2CCC26XX_I2CPinCfg i2cMPUCfg = {
 // Define structure for activity data
 struct activity {
     uint8_t eat;
-    uint8_t exercixe;
+    uint8_t exercise;
     uint8_t pet;
 };
 
@@ -106,7 +108,7 @@ struct activity activity = {0, 0, 0};
 void buzzerBeep(uint16_t beepDuration, uint16_t pauseDuration, uint16_t beeps);
 
 // Create message to be sent to host
-void createMessage(struct activity *activity, char *message);
+void createMessage(uint8_t *deviceID, struct activity *activity, char *message);
 
 
 // Napinpainalluksen keskeytyksen käsittelijäfunktio
@@ -436,6 +438,69 @@ void buzzerBeep(uint16_t beepDuration, uint16_t pauseDuration, uint16_t beeps) {
 
 }
 
-void createMessage(struct activity *activity, char *message) {
+void createMessage(uint8_t *deviceID, struct activity *activity, char *message) {
+    // To know if output empty message
+    int8_t emptyMessage = true;
 
+    // Place the id in the begin of string
+    snprintf(message, B_MAX_LEN,"id:%d", *deviceID);
+
+    // If all values have some data
+    if (activity->eat > 0 &&
+        activity->exercise > 0 &&
+        activity->pet > 0)
+    {
+        snprintf(message + strlen(message),
+                B_MAX_LEN,
+                ",ACTIVATE:%d;%d;%d",
+                activity->eat,
+                activity->exercise,
+                activity->pet);
+
+        emptyMessage = false;
+    }
+    // If two or less have data
+    else
+    {
+        // Append eat data
+        if (activity->eat > 0)
+        {
+            snprintf(message + strlen(message),
+                    B_MAX_LEN,
+                    ",EAT:%d",
+                    activity->eat);
+
+            emptyMessage = false;
+        }
+
+        // Append exercise data
+        if (activity->exercise > 0)
+        {
+            snprintf(message + strlen(message),
+                    B_MAX_LEN,
+                    ",EXERCISE:%d",
+                    activity->exercise);
+
+            emptyMessage = false;
+        }
+
+        // Append pet data
+        if (activity->pet > 0)
+        {
+            snprintf(message + strlen(message),
+                    B_MAX_LEN,
+                    ",PET:%d",
+                    activity->pet);
+
+            emptyMessage = false;
+        }
+
+    }
+
+    if(emptyMessage)
+    {
+        snprintf(message + strlen(message),
+                B_MAX_LEN,
+                ",ping");
+    }
 }
