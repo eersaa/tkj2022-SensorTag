@@ -111,6 +111,66 @@ void buzzerBeep(uint16_t beepDuration, uint16_t pauseDuration, uint16_t beeps);
 void createMessage(uint8_t *deviceID, struct activity *activity, char *message);
 
 
+//State machine pseudo code
+
+/* States:
+ * WAITING
+ * DETECT_MOVEMENT
+ * PROCESS_MESSAGE
+ * COUNT_REPEATS
+ * DETECT_EATING
+ *
+ */
+//Main:
+
+//  If(programState == WAITING)
+//      Wait for request from button0 or communication
+
+//      if(button0)
+//          Turn on led
+//          (make beep)
+//          programState = DETECT_MOVEMENT
+
+//      else if(newDataReceived)
+//          programState = PROCESS_MESSAGE
+
+//      (Possible extra function:
+//      Read other sensors and send data.)
+
+
+//buttonFxn:
+//  If(programState == WAITING)
+//      Request state change to detect movement
+//      or change state directly? Which one is better.
+
+//  Else if(programState == COUNT_REPEATS)
+//      Request state change to update status to host.
+
+//  else if(programState == DETECT_MOVEMENT)
+//      Request state change to DETECT_EATING
+
+
+//commTask:
+//  if(programState == PROCESS_MESSAGE
+//      processMessage()
+
+
+//sensorTask:
+//  if(programState == DETECT_MOVEMENT)
+//      detectMovement()
+
+//      if(activity.pet > 0 ||
+//          activity.exercise > 0)
+//          programState == COUNT_REPEATS
+
+//      else if(button?)
+//          programState == DETECT_EATING
+
+//  else if(programState == COUNT_REPEATS)
+
+
+
+
 // Napinpainalluksen keskeytyksen käsittelijäfunktio
 void buttonFxn(PIN_Handle handle, PIN_Id pinId)
 {
