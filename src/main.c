@@ -8,7 +8,11 @@
 
 #include "mpuSim.h"
 
-#define AXLE_SAMPLE_SIZE 40
+#define AXLESAMPLESIZE 5
+#define WINDOWSIZE 3
+
+float mpuData[6][AXLESAMPLESIZE];
+enum axle {axle_x_acc = 0, axle_y_acc = 1, axle_z_acc = 2, axle_x_gyro = 3, axle_y_gyro = 4, axle_z_gyro = 5};
 
 // Prototypes
 void movavg(float *array, uint8_t array_size, uint8_t window_size, float *array_to_save_values);
@@ -16,9 +20,6 @@ float average(float *array, uint8_t size);
 float variance(float *array, uint8_t size);
 int detect_movement(void);
 
-float data[AXLE_SAMPLE_SIZE];
-
-float gyro_y_sma_data[AXLE_SAMPLE_SIZE - 3];
 
 int main(int argc, char const *argv[])
 {
@@ -33,11 +34,18 @@ int main(int argc, char const *argv[])
     float ax, ay, az, gx, gy, gz;
 
     // Fill table first with data
-    for (int i = 0; i < sizeof(data)/sizeof(data[0]); i++)
+    for (int i = 0; i < sizeof(mpuData[0])/sizeof(mpuData[0][0]); i++)
     {
-        get_eat_data(&ax, &ay, &az, &gx, &gy, &gz);
+        get_pet_data(&ax, &ay, &az, &gx, &gy, &gz);
 
-        data[i] = gy;
+        mpuData[axle_x_acc][i] = ax;
+        mpuData[axle_y_acc][i] = ay;
+        mpuData[axle_z_acc][i] = az;
+
+        mpuData[axle_x_gyro][i] = gx;
+        mpuData[axle_y_gyro][i] = gy;
+        mpuData[axle_z_gyro][i] = gz;
+
     }
     
     // Loop forever
@@ -61,14 +69,26 @@ int main(int argc, char const *argv[])
         }
 
         // Shift table one index and add new value to end
-        for (int i = 0; i < sizeof(data)/sizeof(data[0]) - 1; i++)
+        for (int i = 0; i < sizeof(mpuData[0])/sizeof(mpuData[0][0]) - 1; i++)
         {
-            data[i] = data[i+1];
+            mpuData[axle_x_acc][i] = mpuData[axle_x_acc][i+1]; 
+            mpuData[axle_y_acc][i] = mpuData[axle_y_acc][i+1]; 
+            mpuData[axle_z_acc][i] = mpuData[axle_z_acc][i+1]; 
+
+            mpuData[axle_x_gyro][i] = mpuData[axle_x_gyro][i+1];
+            mpuData[axle_y_gyro][i] = mpuData[axle_y_gyro][i+1];
+            mpuData[axle_z_gyro][i] = mpuData[axle_z_gyro][i+1];
         }
         int timestamp = 0;
-        timestamp = get_eat_data(&ax, &ay, &az, &gx, &gy, &gz);
-        // Last index
-        data[sizeof(data)/sizeof(data[0]) - 1] = gy;
+        timestamp = get_pet_data(&ax, &ay, &az, &gx, &gy, &gz);
+        // Get new value to last index
+        mpuData[axle_x_acc][sizeof(mpuData[0])/sizeof(mpuData[0][0]) - 1] = ax;
+        mpuData[axle_y_acc][sizeof(mpuData[0])/sizeof(mpuData[0][0])] = ay;
+        mpuData[axle_z_acc][sizeof(mpuData[0])/sizeof(mpuData[0][0])] = az;
+
+        mpuData[axle_x_gyro][sizeof(mpuData[0])/sizeof(mpuData[0][0])] = gx;
+        mpuData[axle_y_gyro][sizeof(mpuData[0])/sizeof(mpuData[0][0])] = gy;
+        mpuData[axle_z_gyro][sizeof(mpuData[0])/sizeof(mpuData[0][0])] = gz;
 
         printf("%d\t", timestamp);
 
@@ -84,15 +104,27 @@ int main(int argc, char const *argv[])
 // return 3 -> PET
 // Requires a little bit more defining to x and z values
 int detect_movement() {
-    //movavg(data, AXLE_SAMPLE_SIZE, 4, gyro_x_sma_data);
-    movavg(data, AXLE_SAMPLE_SIZE, 4, gyro_y_sma_data);
-    //movavg(data, AXLE_SAMPLE_SIZE, 4, gyro_z_sma_data);
 
-    for (int i = 0; i < AXLE_SAMPLE_SIZE - 1; i++) {
-        // Detecting if eating
-        if (abs(data[i]) > variance(data, AXLE_SAMPLE_SIZE) + 100) {
+    for (int i = 0; i < AXLESAMPLESIZE; i++) {
+
+        // Detect eating 
+        // Needs to also check if the button is pressed
+        if (mpuData[axle_y_gyro][i] < -120 && mpuData[axle_z_acc][i] > 1.75) {
             return 1;
         }
+
+        // // Detect excercising
+        // // For some unknown reason, test data doesnt 
+        // if (mpuData[axle_z_acc][i]*9.81 < 0.8) {
+        //     return 2;
+        // }
+
+        // Detect petting
+        if ((mpuData[axle_y_acc][i]*9.81 > 0.85 && mpuData[axle_x_gyro][i] > 200) ||
+            (mpuData[axle_z_acc][i] > 0.85 && mpuData[axle_x_gyro][i] > 200)) {
+            return 3;
+        }
+
     }
 
     return 0;
@@ -125,7 +157,7 @@ float variance(float *array, uint8_t size) {
     return variance;
 }
 
-// Function for calculating average and Simple Moving Average (SMA)
+// Function for calculating Simple Moving Average (SMA)
 void movavg(float *array, uint8_t array_size, uint8_t window_size, float *array_to_save_values) {
     float *ptr_start = array; // Starting pointer for every window
     float *ptr_avg = array; // Pointer moving inside the window
