@@ -113,47 +113,53 @@ void createMessage(uint8_t *deviceID, struct activity *activity, char *message);
 
 //State machine pseudo code
 
-/* States:
+/* States: programState
  * WAITING
  * DETECT_MOVEMENT
- * PROCESS_MESSAGE
  * COUNT_REPEATS
  * DETECT_EATING
  * UPDATE_STATUS_TO_HOST
  *
- * MPU States:
+ *Sub state machines
+ * MPU9250 States: mpuState
  * MPU_WAITING
  * MPU_READ
  *
- * Communication states:
- * COMM_WAITING
- * PROCESS MESSAGE
+ * Communication states: commState
+ * UART_WAITING
+ * UART_PROCESS_MESSAGE
+ *
+ *
  */
-//Main:
+//mainTask:
 
-//  If(programState == WAITING)
-//      Wait for request from button0 or communication
+//  if(programState == WAITING)
+//      Wait for request from button
 
-//      if(button0)
-//          Turn on led
-//          (make beep)
+//      if(buttonInterruption)
+//          buttonInterruption = false
+//          led1On()
+//          buzzerBeep()
+//          Clock_start() // Start clock interruptions
 //          programState = DETECT_MOVEMENT
-
-//      else if(newDataReceived)
-//          programState = PROCESS_MESSAGE
 
 //      (Possible extra function:
 //      Read other sensors and send data.)
 
+
+
 // Interruptions
+// Clock interruption on certain frequency.
 //clockFxn:
-//  if(programState == DETECT_MOVEMENT ||
+//  if((programState == DETECT_MOVEMENT ||
 //      programState == COUNT_REPEATS ||
-//      programState == DETECT_EATING)
+//      programState == DETECT_EATING) &&
+//      mpuState == MPU_WAITING)
 
-//      requestRead = true // or maybe another option is to call directly mpu_get_data()
+//      mpuState = MPU_READ
 
-    // If multiples of clock wanted just make request on certain counter intervals
+    // If multiples of clock cycle needed
+    // just make request on certain counter intervals
 //      if(counter1 > 1)
 //          request1 = true // Clear request where used
 //          counter1 = 0
@@ -166,6 +172,7 @@ void createMessage(uint8_t *deviceID, struct activity *activity, char *message);
 //      else
 //          counter2++
 
+// Interruption on button press
 //buttonFxn:
 //  If(programState == WAITING)
 //      Request state change to detect movement
@@ -177,13 +184,24 @@ void createMessage(uint8_t *deviceID, struct activity *activity, char *message);
 //  else if(programState == DETECT_MOVEMENT)
 //      Request state change to DETECT_EATING
 
+// Interruption when incoming data via uart.
+//commFxn:
+//  if(commState == UART_WAITING)
+//      commState = UART_PROCESS_MESSAGE
+
+
 //Normal tasks
 //commTask:
-//  if(programState == PROCESS_MESSAGE)
+//  if(commState == UART_PROCESS_MESSAGE &&
+//      !programState == UPDATE_STATUS_TO_HOST)
+
         // Process incoming/received message
 //      processMessage()
 
-//  else if(programState == UPDATE_STATUS_TO_HOST)
+
+//  if(programState == UPDATE_STATUS_TO_HOST
+//      !commState == UART_PROCESS_MESSAGE)
+//      Clock_stop() // Stop clock interruptions
 //      createMessage
 //      sendMessageUart
 
@@ -192,36 +210,55 @@ void createMessage(uint8_t *deviceID, struct activity *activity, char *message);
 
 
 //sensorTask:
+//  // Do we need to call this in different interval than mpu
+    // We can use the counter interruption here to adjust the interval
 //  if(programState == DETECT_MOVEMENT)
-//      detectMovement()
+//      if(detectMovement() == pet)
+//          activity.pet++
+//          buzzerBeep()
 
-//      if(activity.pet > 0 ||
+//      else if(detectMovement() == exercise)
+//          activity.exercise++
+//          buzzerBeep()
+
+
+//      if(buttonInterruption)
+//          buttonInterruption = false
+//          led2On()
+//          buzzerBeep()
+//          programState == DETECT_EATING
+
+//      else if(activity.pet > 0 ||
 //          activity.exercise > 0)
 //          programState == COUNT_REPEATS
 
-//      else if(button?)
-//          programState == DETECT_EATING
 
 //  else if(programState == COUNT_REPEATS)
-//      if(button)
+//      if(buttonInterruption)
+//          buttonInterruption = false
 //          programState = UPDATE_STATUS_TO_HOST
 
 //      else if(activity.pet > 0 &&
 //              detectMovement() == pet)
 //          activity.pet++
+//          buzzerBeep()
 
 //      else if(activity.exercise > 0 &&
 //              detectMovement() == exercise)
 //          activity.exercise++
+//          buzzerBeep()
 
 //  else if(programState == DETECT_EATING)
-//      if(button)
+//      if(buttonInterruption)
 //          programState = UPDATE_STATUS_TO_HOST
 
 //      else if(detectMovement() == eat)
 //          activity.eat++
+//          buzzerBeep()
 
-
+//  if(mpuState == MPU_READ)
+//      mpu_get_data()
+//      mpuState = MPU_WAITING
 
 
 // Napinpainalluksen keskeytyksen käsittelijäfunktio
