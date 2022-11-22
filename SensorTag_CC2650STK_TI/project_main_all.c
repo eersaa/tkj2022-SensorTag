@@ -119,7 +119,15 @@ void createMessage(uint8_t *deviceID, struct activity *activity, char *message);
  * PROCESS_MESSAGE
  * COUNT_REPEATS
  * DETECT_EATING
+ * UPDATE_STATUS_TO_HOST
  *
+ * MPU States:
+ * MPU_WAITING
+ * MPU_READ
+ *
+ * Communication states:
+ * COMM_WAITING
+ * PROCESS MESSAGE
  */
 //Main:
 
@@ -137,6 +145,26 @@ void createMessage(uint8_t *deviceID, struct activity *activity, char *message);
 //      (Possible extra function:
 //      Read other sensors and send data.)
 
+// Interruptions
+//clockFxn:
+//  if(programState == DETECT_MOVEMENT ||
+//      programState == COUNT_REPEATS ||
+//      programState == DETECT_EATING)
+
+//      requestRead = true // or maybe another option is to call directly mpu_get_data()
+
+    // If multiples of clock wanted just make request on certain counter intervals
+//      if(counter1 > 1)
+//          request1 = true // Clear request where used
+//          counter1 = 0
+//      else
+//          counter1++
+
+//      if(counter2 > 2)
+//          request2 = true // Clear request where used
+//          counter2 = 0
+//      else
+//          counter2++
 
 //buttonFxn:
 //  If(programState == WAITING)
@@ -149,10 +177,18 @@ void createMessage(uint8_t *deviceID, struct activity *activity, char *message);
 //  else if(programState == DETECT_MOVEMENT)
 //      Request state change to DETECT_EATING
 
-
+//Normal tasks
 //commTask:
-//  if(programState == PROCESS_MESSAGE
+//  if(programState == PROCESS_MESSAGE)
+        // Process incoming/received message
 //      processMessage()
+
+//  else if(programState == UPDATE_STATUS_TO_HOST)
+//      createMessage
+//      sendMessageUart
+
+//      if(wirelessEnabled) // Optional
+//          sendMessage6LowPan
 
 
 //sensorTask:
@@ -167,6 +203,23 @@ void createMessage(uint8_t *deviceID, struct activity *activity, char *message);
 //          programState == DETECT_EATING
 
 //  else if(programState == COUNT_REPEATS)
+//      if(button)
+//          programState = UPDATE_STATUS_TO_HOST
+
+//      else if(activity.pet > 0 &&
+//              detectMovement() == pet)
+//          activity.pet++
+
+//      else if(activity.exercise > 0 &&
+//              detectMovement() == exercise)
+//          activity.exercise++
+
+//  else if(programState == DETECT_EATING)
+//      if(button)
+//          programState = UPDATE_STATUS_TO_HOST
+
+//      else if(detectMovement() == eat)
+//          activity.eat++
 
 
 
