@@ -29,7 +29,6 @@
 Char mainTaskStack[STACKSIZE];
 Char sensorTaskStack[STACKSIZE];
 Char commTaskStack[STACKSIZE];
-Char mpuTaskStack[STACKSIZE];
 
 #define B_MAX_LEN 80    // Define maximum length for buffer.
 
@@ -43,7 +42,8 @@ enum states
     CLOSE_MPU_I2C,
     UPDATE_STATUS_TO_HOST,
 
-    OPEN_I2C,       //States for reading data from other sensors
+    SENSORS_WAITING, //States for reading data from other sensors
+    OPEN_I2C,
     READ_OTHER_SENSOR,
     CLOSE_I2C,
 
@@ -51,57 +51,63 @@ enum states
     UART_PROCESS_MESSAGE
 };
 // Three state machines
-enum states programState = WAITING_HOME;
-enum states mpuState = MPU_WAITING;
+enum states programState = WAITING;
 enum states commState = UART_WAITING;
+enum states sensorState = SENSORS_WAITING;
 
 //Global variables
 double ambientLight = -1000.0;
 char merkkijono[50];
+uint8_t cycle = 50; // Reading rate for mpu9250 sensor in milliseconds
 
+char uartBuffer[80]; // Vastaanottopuskuri
+
+// Variables for interruptions
 uint8_t button0Int = false;
+uint8_t button1Int = false;
+uint8_t clkInt = false;
 
-// RTOS:n globaalit muuttujat pinnien käyttöön
-static PIN_Handle buttonHandle;
-static PIN_State buttonState;
-static PIN_Handle ledHandle;
-static PIN_State ledState;
+// RTOSs global variables for PINs
+static PIN_Handle button0Handle;
+static PIN_State button0State;
+static PIN_Handle button1Handle;
+static PIN_State button1State;
+static PIN_Handle led0Handle;
+static PIN_State led0State;
+static PIN_Handle led1Handle;
+static PIN_State led1State;
 static PIN_Handle hBuzzer;
 static PIN_State sBuzzer;
+static PIN_Handle hMpuPin;
+static PIN_State  MpuPinState;
 
-// RTOS:n kellomuuttujat
+// RTOSs clock variables
 static Clock_Handle clkHandle;
 static Clock_Params clkParams;
 
 // Pinnien alustukset, molemmille pinneille oma konfiguraatio
 // Vakio BOARD_BUTTON_0 vastaa toista painonappia
-PIN_Config buttonConfig[] = {
+PIN_Config button0Config[] = {
 Board_BUTTON0 | PIN_INPUT_EN | PIN_PULLUP | PIN_IRQ_NEGEDGE,
                               PIN_TERMINATE // Asetustaulukko lopetetaan aina tällä vakiolla
         };
 
-// Vakio Board_LED0 vastaa toista lediä
-
-PIN_Config ledConfig[] = {
-Board_LED0 | PIN_GPIO_OUTPUT_EN | PIN_GPIO_LOW | PIN_PUSHPULL | PIN_DRVSTR_MAX,
-                           PIN_TERMINATE // Asetustaulukko lopetetaan aina tällä vakiolla
+PIN_Config button1Config[] = {
+Board_BUTTON1 | PIN_INPUT_EN | PIN_PULLUP | PIN_IRQ_NEGEDGE,
+                              PIN_TERMINATE // Asetustaulukko lopetetaan aina tällä vakiolla
         };
 
-// Pin config for buzzer
-PIN_Config cBuzzer[] = {
-  Board_BUZZER | PIN_GPIO_OUTPUT_EN | PIN_GPIO_LOW | PIN_PUSHPULL | PIN_DRVSTR_MAX,
-  PIN_TERMINATE
-};
+// Initialize first board led
+PIN_Config led0Config[] = {Board_LED0 | PIN_GPIO_OUTPUT_EN | PIN_GPIO_LOW | PIN_PUSHPULL | PIN_DRVSTR_MAX, PIN_TERMINATE};
 
-// MPU power pin global variables
-static PIN_Handle hMpuPin;
-static PIN_State  MpuPinState;
+// Initialize second board led
+PIN_Config led1Config[] = {Board_LED1 | PIN_GPIO_OUTPUT_EN | PIN_GPIO_LOW | PIN_PUSHPULL | PIN_DRVSTR_MAX, PIN_TERMINATE};
+
+// Pin config for buzzer
+PIN_Config cBuzzer[] = {Board_BUZZER | PIN_GPIO_OUTPUT_EN | PIN_GPIO_LOW | PIN_PUSHPULL | PIN_DRVSTR_MAX,PIN_TERMINATE};
 
 // MPU power pin
-static PIN_Config MpuPinConfig[] = {
-    Board_MPU_POWER  | PIN_GPIO_OUTPUT_EN | PIN_GPIO_HIGH | PIN_PUSHPULL | PIN_DRVSTR_MAX,
-    PIN_TERMINATE
-};
+static PIN_Config MpuPinConfig[] = {Board_MPU_POWER  | PIN_GPIO_OUTPUT_EN | PIN_GPIO_HIGH | PIN_PUSHPULL | PIN_DRVSTR_MAX, PIN_TERMINATE};
 
 // MPU uses its own I2C interface
 static const I2CCC26XX_I2CPinCfg i2cMPUCfg = {
@@ -130,67 +136,38 @@ void createMessage(uint8_t *deviceID, struct activity *activity, char *message);
 
 
 // Button press interruption handler
-void buttonFxn(PIN_Handle handle, PIN_Id pinId){
-//buttonFxn:
-//  If(programState == WAITING)
-//      Request state change to detect movement
-//      or change state directly? Which one is better.
-
-//  Else if(programState == COUNT_REPEATS)
-//      Request state change to update status to host.
-
-//  else if(programState == DETECT_MOVEMENT)
-//      Request state change to DETECT_EATING
+void button0Fxn(PIN_Handle handle, PIN_Id pinId){
 
     if (programState == WAITING) {
         button0Int = true;
     }
-    else if(programState == DETECT_MOVEMENT){
+    else if(programState == OPEN_MPU_I2C){
         button0Int = true;
     }
 
 }
 
-
-// Kellokeskeytyksen käsittelijä
-void clkFxn(UArg arg0) {
-// Clock interruption on certain frequency.
-//clockFxn:
-//  if((programState == DETECT_MOVEMENT ||
-//      programState == COUNT_REPEATS ||
-//      programState == DETECT_EATING) &&
-//      mpuState == MPU_WAITING)
-
-//      mpuState = MPU_READ
-
-    // If multiples of clock cycle needed
-    // just make request on certain counter intervals
-//      if(counter1 > 1)
-//          request1 = true // Clear request where used
-//          counter1 = 0
-//      else
-//          counter1++
-
-//      if(counter2 > 2)
-//          request2 = true // Clear request where used
-//          counter2 = 0
-//      else
-//          counter2++
-
-    if(programState == DETECT_MOVEMENT &&
-        mpuState == MPU_WAITING){
-
-        mpuState = MPU_READ;
-   }
+// Button press interruption handler
+void button1Fxn(PIN_Handle handle, PIN_Id pinId){
+    ;
 
 }
 
-// Uart exception handler function
-static void uartFxn(UART_Handle handle, void *rxBuf, size_t len){
-      if(commState == UART_WAITING)
+// Clock interruption handler
+void clkFxn(UArg arg0) {
+    // Request interruption
+    if(programState == DETECT_MOVEMENT) {
+        clkInt = true;
+
+   }
+}
+
+// Uart exception handler
+static void uartFxn(UART_Handle handle, void *rxBuf, size_t len) {
+      if (commState == UART_WAITING) {
           // Store message to buffer here
           commState = UART_PROCESS_MESSAGE;
-
+      }
 }
 
 /* Task Functions */
@@ -202,14 +179,14 @@ Void mainTask(UArg arg0, UArg arg1)
     {
         if(programState == WAITING)
 
+            // Prepare sensors and inform user
             if(button0Int){
                 button0Int = false;
 //              led1On()
                 buzzerBeep(500, 0, 1);
                 Clock_start(clkHandle); // Start clock interruptions
-                // If we need to switch between i2c buses we need to do it before
-                // moving to DETECT_MOVEMENT state.
-                programState = DETECT_MOVEMENT;
+
+                programState = OPEN_MPU_I2C;
             }
 
 //      (Possible extra function:
@@ -233,8 +210,9 @@ Void commTask(UArg arg0, UArg arg1)
     uartParams.writeDataMode = UART_DATA_TEXT;
     uartParams.readDataMode = UART_DATA_TEXT;
     uartParams.readEcho = UART_ECHO_OFF;
-    uartParams.readMode = UART_MODE_BLOCKING;
+    uartParams.readMode = UART_MODE_CALLBACK;
     uartParams.writeMode = UART_MODE_BLOCKING;
+    uartParams.readCallback  = &uartFxn;
     uartParams.baudRate = 9600; // nopeus 9600baud
     uartParams.dataLength = UART_LEN_8; // 8
     uartParams.parityType = UART_PAR_NONE; // n
@@ -247,42 +225,30 @@ Void commTask(UArg arg0, UArg arg1)
         System_abort("Error opening the UART");
     }
 
+    // Nyt tarvitsee käynnistää datan odotus
+    UART_read(uartHandle, uartBuffer, 80);
+
+    System_printf("UART started\n");
+    System_flush()
+
     while (1)
     {
-
-        //commTask:
-        //  if(commState == UART_PROCESS_MESSAGE &&
-        //      !programState == UPDATE_STATUS_TO_HOST)
-
-                // Process incoming/received message
-        //      processMessage()
-
-
-        //  if(programState == UPDATE_STATUS_TO_HOST
-        //      !commState == UART_PROCESS_MESSAGE)
-        //      Clock_stop() // Stop clock interruptions
-        //      createMessage()
-        //      sendMessageUart()
-
-        //      if(wirelessEnabled) // Optional
-        //          sendMessage6LowPan
-
-
+        // Process incoming message
         if(commState == UART_PROCESS_MESSAGE &&
             !programState == UPDATE_STATUS_TO_HOST){
 
-            // Process incoming/received message
             //processMessage()
 
             commState = UART_WAITING;
 
         }
 
-        if (programState == UPDATE_STATUS_TO_HOST
+        // Update status to host
+        if (programState == UPDATE_STATUS_TO_HOST &&
               !commState == UART_PROCESS_MESSAGE) {
 
             Clock_stop(clkHandle); // Stop clock interruptions
-            createMessage(deviceID, activity, message);
+            //createMessage(deviceID, *activity, message);
             //sendMessageUart()
         }
 
@@ -294,126 +260,20 @@ Void commTask(UArg arg0, UArg arg1)
 Void sensorTask(UArg arg0, UArg arg1)
 {
 
-    I2C_Handle i2c;
-    I2C_Params i2cParams;
-
-    // Initialize i2c-bus
-    I2C_Params_init(&i2cParams);
-    i2cParams.bitRate = I2C_400kHz;
-
-
-
-    while (1)
-    {
-
-        //sensorTask:
-
-        //  if(programState == DETECT_MOVEMENT)
-                //Update data to table and detect movement
-
-        //      if(buttonInterruption)
-        //          buttonInterruption = false
-        //          led2On()
-        //          buzzerBeep()
-        //          programState == DETECT_EATING
-
-        //  else if(programState == DETECT_EATING)
-        //      if(buttonInterruption)
-        //          programState = UPDATE_STATUS_TO_HOST
-
-        //      else if(detectMovement() == eat)
-        //          activity.eat++
-        //          buzzerBeep()
-
-        //  if(mpuState == MPU_READ)
-        //      mpu_get_data()
-        //      mpuState = MPU_WAITING
-
-        // Open mpu i2c bus
-        if (programState == OPEN_MPU_I2C) {
-            // Open mpu i2c bus here
-            //Sleep 1 second
-            Task_sleep(1000000 / Clock_tickPeriod);
-
-            programState = DETECT_MOVEMENT;
-
-        }
-        // Read accelometer data and detect movement
-        else if (programState == DETECT_MOVEMENT){
-
-            if(button0Int)
-                button0Int = false;
-
-                programState = CLOSE_MPU_I2C;
-
-    //      if(button2Interruption)
-    //          buttonInterruption = false
-    //          led2On()
-    //          buzzerBeep()
-    //          programState == DETECT_EATING
-        }
-        // Close mpu i2c bus
-        else if (programState == CLOSE_MPU_I2C) {
-
-            Task_sleep(1000000 / Clock_tickPeriod);
-
-            programState = UPDATE_STATUS_TO_HOST;
-        }
-
-            // Avataan yhteys
-            i2c = I2C_open(Board_I2C_TMP, &i2cParams);
-            if (i2c == NULL)
-            {
-                System_abort("Error Initializing I2C\n");
-            }
-
-            Task_sleep(100000 / Clock_tickPeriod);
-
-            //Initialize opt3001 light sensor
-            opt3001_setup(&i2c);
-
-            //Delay the data read to get successful reading
-            Task_sleep(1000000 / Clock_tickPeriod);
-
-            ambientLight = opt3001_get_data(&i2c);
-
-            I2C_close(i2c);
-
-            sprintf(merkkijono, "Sensor:%f\n", ambientLight);
-            System_printf(merkkijono);
-            System_flush();
-
-            //Check the state before update
-            if (programState == WAITING_READ) {
-                programState = READ_MPU;
-            } else {
-                programState = WAITING_HOME;
-            }
-
-        }
-        /*
-        //debug
-        sprintf(merkkijono,"programState %d\n",programState);
-        System_printf(merkkijono);
-        System_printf("SensorTask\n");
-        System_flush();
-        */
-
-        // Once per second, you can modify this
-        Task_sleep(1000000 / Clock_tickPeriod);
-    }
-}
-
-Void mpuSensorFxn(UArg arg0, UArg arg1) {
-
     float ax, ay, az, gx, gy, gz;
 
+    I2C_Handle i2c;
+    I2C_Params i2cParams;
     I2C_Handle i2cMPU; // Own i2c-interface for MPU9250 sensor
     I2C_Params i2cMPUParams;
 
+    // Initialize i2c-buses
+    I2C_Params_init(&i2cParams);
+    i2cParams.bitRate = I2C_400kHz;
     I2C_Params_init(&i2cMPUParams);
     i2cMPUParams.bitRate = I2C_400kHz;
-    // Note the different configuration below
+
+    // Mpu i2c bus has its own configurationNote the different configuration below
     i2cMPUParams.custom = (uintptr_t)&i2cMPUCfg;
 
     // MPU power on
@@ -424,58 +284,100 @@ Void mpuSensorFxn(UArg arg0, UArg arg1) {
     System_printf("MPU9250: Power ON\n");
     System_flush();
 
-    // Loop forever
-    while (1) {
 
-        if (programState == READ_MPU) {
-            // MPU open i2c
+    while (1)
+    {
+        // Open mpu i2c bus
+        if (programState == OPEN_MPU_I2C) {
+
             i2cMPU = I2C_open(Board_I2C, &i2cMPUParams);
             if (i2cMPU == NULL) {
                 System_abort("Error Initializing I2CMPU\n");
             }
-
-            // MPU setup and calibration
-//            System_printf("MPU9250: Setup and calibration...\n");
-//            System_flush();
-
+            // Setup mpu sensor
             mpu9250_setup(&i2cMPU);
 
-//            System_printf("MPU9250: Setup and calibration OK\n");
-//            System_flush();
+            //Sleep 1 second
+            Task_sleep(1000000 / Clock_tickPeriod);
+
+            programState = DETECT_MOVEMENT;
+
+        }
+        // Read accelometer data and detect movement
+        else if (programState == DETECT_MOVEMENT){
+
+            if(button0Int){
+                button0Int = false;
+
+                programState = CLOSE_MPU_I2C;
+            }
 
             // MPU ask data
             mpu9250_get_data(&i2cMPU, &ax, &ay, &az, &gx, &gy, &gz);
 
-            // MPU close i2c
-            I2C_close(i2cMPU);
+    //      if(button2Interruption)
+    //          buttonInterruption = false
+    //          led2On()
+    //          buzzerBeep()
+    //          programState == DETECT_EATING
+        }
 
-            sprintf(merkkijono, "mpu:%+4.2f,%+4.2f,%+4.2f,%+4.2f,%+4.2f,%+4.2f\n", ax, ay, az, gx, gy, gz);
+        // Close mpu i2c bus
+        else if (programState == CLOSE_MPU_I2C) {
+            I2C_close(i2cMPU);
+            // Sleep 1 second
+            Task_sleep(1000000 / Clock_tickPeriod);
+
+            programState = UPDATE_STATUS_TO_HOST;
+        }
+
+        // Open i2c bus for other sensors
+        if (sensorState == OPEN_I2C){
+            i2c = I2C_open(Board_I2C_TMP, &i2cParams);
+            if (i2c == NULL)
+            {
+                System_abort("Error Initializing I2C\n");
+            }
+
+            // Sleep 1 second
+            Task_sleep(1000000 / Clock_tickPeriod);
+
+            sensorState = READ_OTHER_SENSOR;
+        }
+        // Read data from other sensors
+        else if (sensorState == READ_OTHER_SENSOR) {
+            //Initialize opt3001 light sensor
+            opt3001_setup(&i2c);
+
+            //Delay the data read to get successful reading
+            Task_sleep(1000000 / Clock_tickPeriod);
+
+            ambientLight = opt3001_get_data(&i2c);
+
+            sprintf(merkkijono, "Sensor:%f\n", ambientLight);
             System_printf(merkkijono);
             System_flush();
 
-            //Check the state before update
-            if (programState == READ_MPU) {
-                programState = WRITE_UART;
-            } else {
-                programState = WAITING_HOME;
-            }
+            sensorState = CLOSE_I2C;
 
         }
 
-        // Sleep 100ms
-        Task_sleep(100000 / Clock_tickPeriod);
-    }
+        //Close i2c bus
+        else if (sensorState == CLOSE_I2C) {
+            I2C_close(i2c);
 
-    // Program never gets here..
-    // MPU close i2c
-    // I2C_close(i2cMPU);
-    // MPU power off
-    // PIN_setOutputValue(hMpuPin,Board_MPU_POWER, Board_MPU_POWER_OFF);
+            // Sleep 1 second
+            Task_sleep(1000000 / Clock_tickPeriod);
+        }
+
+        // Sleep 10 milliseconds
+        Task_sleep(10000 / Clock_tickPeriod);
+    }
 }
+
 
 Int main(void)
 {
-    uint8_t cycle = 100; // milliseconds
 
     // Task variables
     Task_Handle mainTaskHandle;
@@ -495,27 +397,41 @@ Int main(void)
     // Initialize UART
     Board_initUART();
 
-    // Alustetaan kello
+    // Initialize clock
     Clock_Params_init(&clkParams);
     clkParams.period = cycle * 1000 / Clock_tickPeriod;
     clkParams.startFlag = FALSE;
 
-    // Otetaan käyttöön ohjelmassa
+    // Take the clock into use in program
     clkHandle = Clock_create((Clock_FuncPtr)clkFxn, 1000000 / Clock_tickPeriod, &clkParams, NULL);
     if (clkHandle == NULL) {
        System_abort("Clock create failed");
     }
 
-    // Otetaan pinnit käyttöön ohjelmassa
-    buttonHandle = PIN_open(&buttonState, buttonConfig);
-    if (!buttonHandle)
+    // Open button pins
+    button0Handle = PIN_open(&button0State, button0Config);
+    if (!button0Handle)
     {
-        System_abort("Error initializing button pins\n");
+        System_abort("Error initializing button0 pins\n");
     }
-    ledHandle = PIN_open(&ledState, ledConfig);
-    if (!ledHandle)
+
+    button1Handle = PIN_open(&button1State, button1Config);
+    if (!button1Handle)
     {
-        System_abort("Error initializing LED pins\n");
+        System_abort("Error initializing button1 pins\n");
+    }
+
+    // Open led pins
+    led0Handle = PIN_open(&led0State, led0Config);
+    if (!led0Handle)
+    {
+        System_abort("Error initializing LED0 pins\n");
+    }
+
+    led1Handle = PIN_open(&led1State, led1Config);
+    if (!led1Handle)
+    {
+        System_abort("Error initializing LED1 pins\n");
     }
 
     // Open MPU power pin
@@ -530,11 +446,16 @@ Int main(void)
       System_abort("Buzzer pin open failed!");
     }
 
-    // Asetetaan painonappi-pinnille keskeytyksen käsittelijäksi
-    // funktio buttonFxn
-    if (PIN_registerIntCb(buttonHandle, &buttonFxn) != 0)
+    // Set interruption for button0
+    if (PIN_registerIntCb(button0Handle, &button0Fxn) != 0)
     {
-        System_abort("Error registering button callback function");
+        System_abort("Error registering button0 callback function");
+    }
+
+    // Set interruption for button1
+    if (PIN_registerIntCb(button1Handle, &button1Fxn) != 0)
+    {
+        System_abort("Error registering button1 callback function");
     }
 
     /* Tasks */
@@ -567,7 +488,6 @@ Int main(void)
     {
         System_abort("Communication task create failed!");
     }
-
 
     /* Sanity check */
     System_printf("Hello world!\n");
