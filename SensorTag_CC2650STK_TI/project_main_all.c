@@ -26,6 +26,7 @@
 
 /* Task */
 #define STACKSIZE 2048
+Char mainTask[STACKSIZE];
 Char sensorTaskStack[STACKSIZE];
 Char uartTaskStack[STACKSIZE];
 Char mpuTaskStack[STACKSIZE];
@@ -33,14 +34,24 @@ Char mpuTaskStack[STACKSIZE];
 #define B_MAX_LEN 80    // Define maximum length for buffer.
 
 // Definition of the state machine states
-enum state
+enum states
 {
-    WAITING_HOME = 1, //
-    WAITING_READ,   // Waiting the time interruption to read the MPU sensor
-    READ_MPU,       // Reads the MPU sensor
-    WRITE_UART     // Write data to UART
+    WAITING = 1,    // States for main program
+    DETECT_MOVEMENT,
+    COUNT_REPEATS,
+    DETECT_EATING,
+    UPDATE_STATUS_TO_HOST,
+
+    MPU_WAITING,    // States for mpu9250 reading control
+    MPU_READ,
+
+    UART_WAITING,   // States for uart communication
+    UART_PROCESS_MESSAGE
 };
-enum state programState = WAITING_HOME;
+// Three state machines
+enum states programState = WAITING_HOME;
+enum states mpuStates = MPU_WAITING;
+enum states uartStates = UART_WAITING;
 
 //Global variable for ambient light
 double ambientLight = -1000.0;
