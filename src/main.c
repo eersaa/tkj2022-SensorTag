@@ -83,12 +83,12 @@ int main(int argc, char const *argv[])
         timestamp = get_pet_data(&ax, &ay, &az, &gx, &gy, &gz);
         // Get new value to last index
         mpuData[axle_x_acc][sizeof(mpuData[0])/sizeof(mpuData[0][0]) - 1] = ax;
-        mpuData[axle_y_acc][sizeof(mpuData[0])/sizeof(mpuData[0][0])] = ay;
-        mpuData[axle_z_acc][sizeof(mpuData[0])/sizeof(mpuData[0][0])] = az;
+        mpuData[axle_y_acc][sizeof(mpuData[0])/sizeof(mpuData[0][0]) - 1] = ay;
+        mpuData[axle_z_acc][sizeof(mpuData[0])/sizeof(mpuData[0][0]) - 1] = az;
 
-        mpuData[axle_x_gyro][sizeof(mpuData[0])/sizeof(mpuData[0][0])] = gx;
-        mpuData[axle_y_gyro][sizeof(mpuData[0])/sizeof(mpuData[0][0])] = gy;
-        mpuData[axle_z_gyro][sizeof(mpuData[0])/sizeof(mpuData[0][0])] = gz;
+        mpuData[axle_x_gyro][sizeof(mpuData[0])/sizeof(mpuData[0][0]) - 1] = gx;
+        mpuData[axle_y_gyro][sizeof(mpuData[0])/sizeof(mpuData[0][0]) - 1] = gy;
+        mpuData[axle_z_gyro][sizeof(mpuData[0])/sizeof(mpuData[0][0]) - 1] = gz;
 
         printf("%d\t", timestamp);
 
@@ -120,7 +120,7 @@ int detect_movement() {
         // }
 
         // Detect petting
-        if ((mpuData[axle_y_acc][i]*9.81 > 0.85 && mpuData[axle_x_gyro][i] > 200) ||
+        if ((mpuData[axle_y_acc][i] > 0.85 && mpuData[axle_x_gyro][i] < -200) ||
             (mpuData[axle_z_acc][i] > 0.85 && mpuData[axle_x_gyro][i] > 200)) {
             return 3;
         }
