@@ -31,6 +31,8 @@ Char sensorTaskStack[STACKSIZE];
 Char commTaskStack[STACKSIZE];
 
 #define B_MAX_LEN 80    // Define maximum length for buffer.
+#define CYCLE 50        // Reading rage for mpu9259 sensor in milliseconds
+#define BOARD_ID 2232
 
 // Definition of the state machine states
 enum states
@@ -57,10 +59,11 @@ enum states sensorState = SENSORS_WAITING;
 
 //Global variables
 double ambientLight = -1000.0;
-char merkkijono[50];
-uint8_t cycle = 50; // Reading rate for mpu9250 sensor in milliseconds
+char uartBuffer[B_MAX_LEN];     // Buffer for uart interruption
+char inMessage[B_MAX_LEN];      // Memory for incoming message
+char outMessage[B_MAX_LEN];     // Memory for outgoing message
+char merkkijono[B_MAX_LEN];     // String for prints
 
-char uartBuffer[80]; // Vastaanottopuskuri
 
 // Variables for interruptions
 uint8_t button0Int = false;
@@ -134,6 +137,9 @@ void buzzerBeep(uint16_t beepDuration, uint16_t pauseDuration, uint16_t beeps);
 // Create message to be sent to host
 void createMessage(uint8_t *deviceID, struct activity *activity, char *message);
 
+// Process incoming message
+void processMessage(char *message);
+
 
 // Button press interruption handler
 void button0Fxn(PIN_Handle handle, PIN_Id pinId){
@@ -165,7 +171,8 @@ void clkFxn(UArg arg0) {
 // Uart exception handler
 static void uartFxn(UART_Handle handle, void *rxBuf, size_t len) {
       if (commState == UART_WAITING) {
-          // Store message to buffer here
+          snprintf(inMessage, B_MAX_LEN, "%s", rxBuf);
+
           commState = UART_PROCESS_MESSAGE;
       }
 }
@@ -226,10 +233,10 @@ Void commTask(UArg arg0, UArg arg1)
     }
 
     // Nyt tarvitsee käynnistää datan odotus
-    UART_read(uartHandle, uartBuffer, 80);
+    UART_read(uartHandle, uartBuffer, B_MAX_LEN);
 
     System_printf("UART started\n");
-    System_flush()
+    System_flush();
 
     while (1)
     {
@@ -238,6 +245,8 @@ Void commTask(UArg arg0, UArg arg1)
             !programState == UPDATE_STATUS_TO_HOST){
 
             //processMessage()
+            // Start listening the UART again
+            UART_read(uartHandle, uartBuffer, B_MAX_LEN);
 
             commState = UART_WAITING;
 
@@ -399,7 +408,7 @@ Int main(void)
 
     // Initialize clock
     Clock_Params_init(&clkParams);
-    clkParams.period = cycle * 1000 / Clock_tickPeriod;
+    clkParams.period = CYCLE * 1000 / Clock_tickPeriod;
     clkParams.startFlag = FALSE;
 
     // Take the clock into use in program
@@ -577,4 +586,37 @@ void createMessage(uint8_t *deviceID, struct activity *activity, char *message) 
                 B_MAX_LEN,
                 ",ping");
     }
+}
+
+void processMessage(char *message) {
+
+    uint16_t msg_id;
+    char *token;
+
+    // Try to extract the id from the message
+    token = strtok(message, ",");
+
+    if (token == NULL) {
+        System_printf("First token NULL, Cannot find ID\n");
+        System_flush();
+        return;
+    }
+
+    // Convert id to integer
+    msg_id = atoi(token);
+
+    if (msg_id == BOARD_ID) {
+        token = strtok(NULL, ",");
+
+        if (token == NULL) {
+            System_printf("Second token NULL, Cannot find BEEP\n");
+            System_flush();
+            return;
+        }
+
+        if (strstr(token, "BEEP") != NULL) {
+            buzzerBeep(200, 200, 3);
+        }
+    }
+
 }
