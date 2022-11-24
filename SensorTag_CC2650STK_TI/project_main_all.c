@@ -63,8 +63,15 @@ double ambientLight = -1000.0;
 char uartBuffer[B_MAX_LEN];     // Buffer for uart interruption
 char inMessage[B_MAX_LEN];      // Memory for incoming message
 char outMessage[B_MAX_LEN];     // Memory for outgoing message
-char merkkijono[B_MAX_LEN];     // String for prints
+char tempStr[B_MAX_LEN];        // String for prints
 
+// Variables for storing sample data
+#define AXLESAMPLESIZE 5
+float mpuData[6][AXLESAMPLESIZE];
+int mpuDataIndex;
+enum axle { axle_x_acc = 0, axle_y_acc = 1, axle_z_acc = 2,
+            axle_x_gyro = 3, axle_y_gyro = 4, axle_z_gyro = 5
+};
 
 // Variables for interruptions
 uint8_t button0Int = false;
@@ -89,16 +96,16 @@ static PIN_State  MpuPinState;
 static Clock_Handle clkHandle;
 static Clock_Params clkParams;
 
-// Pinnien alustukset, molemmille pinneille oma konfiguraatio
-// Vakio BOARD_BUTTON_0 vastaa toista painonappia
+// Initializing pins, both have their own configuration
+// Constant BOARD_BUTTON_0 means the second button
 PIN_Config button0Config[] = {
 Board_BUTTON0 | PIN_INPUT_EN | PIN_PULLUP | PIN_IRQ_NEGEDGE,
-                              PIN_TERMINATE // Asetustaulukko lopetetaan aina tällä vakiolla
+                              PIN_TERMINATE // Configuration array always ends with this constant
         };
 
 PIN_Config button1Config[] = {
 Board_BUTTON1 | PIN_INPUT_EN | PIN_PULLUP | PIN_IRQ_NEGEDGE,
-                              PIN_TERMINATE // Asetustaulukko lopetetaan aina tällä vakiolla
+                              PIN_TERMINATE // Configuration array always ends with this constant
         };
 
 // Initialize first board led
@@ -127,7 +134,8 @@ struct activity {
 };
 
 // Define global variable for activity data
-struct activity activity = {1, 1, 1};
+struct activity activity = {0, 0, 0};
+struct activity lastActivity = {0, 0, 0};
 
 // Function prototypes
 
@@ -140,6 +148,9 @@ void createMessage(uint16_t deviceID, struct activity *activity, char *message);
 
 // Process incoming message
 void processMessage(char *message);
+
+// Detect and analyse movement from mpuData
+void detectMovement(void);
 
 
 // Button press interruption handler
@@ -194,8 +205,9 @@ Void mainTask(UArg arg0, UArg arg1)
             // Prepare sensors and inform user
             if(button0Int){
                 button0Int = false;
-//              led1On()
-                buzzerBeep(500, 0, 1);
+
+                // Make sound from button press
+                buzzerBeep(100, 0, 1);
                 Clock_start(clkHandle); // Start clock interruptions
 
                 programState = OPEN_MPU_I2C;
@@ -213,11 +225,11 @@ Void mainTask(UArg arg0, UArg arg1)
 Void commTask(UArg arg0, UArg arg1)
 {
 
-    // UART-kirjaston asetukset
+    // Settings for UART-library
     UART_Handle uartHandle;
     UART_Params uartParams;
 
-    // Alustetaan sarjaliikenne
+    // Initializing serial communication
     UART_Params_init(&uartParams);
     uartParams.writeDataMode = UART_DATA_TEXT;
     uartParams.readDataMode = UART_DATA_TEXT;
@@ -225,19 +237,19 @@ Void commTask(UArg arg0, UArg arg1)
     uartParams.readMode = UART_MODE_CALLBACK;
     uartParams.writeMode = UART_MODE_BLOCKING;
     uartParams.readCallback  = &uartFxn;
-    uartParams.baudRate = 9600; // nopeus 9600baud
+    uartParams.baudRate = 9600; // speed 9600baud
     uartParams.dataLength = UART_LEN_8; // 8
     uartParams.parityType = UART_PAR_NONE; // n
     uartParams.stopBits = UART_STOP_ONE; // 1
 
-    // Avataan yhteys laitteen sarjaporttiin vakiossa Board_UART0
+    // Opening connection to device's serial port in constant Board_UART0
     uartHandle = UART_open(Board_UART0, &uartParams);
     if (uartHandle == NULL)
     {
         System_abort("Error opening the UART");
     }
 
-    // Nyt tarvitsee käynnistää datan odotus
+    // Now we need to start waiting data
     UART_read(uartHandle, uartBuffer, B_MAX_LEN);
 
     System_printf("UART started\n");
@@ -263,8 +275,14 @@ Void commTask(UArg arg0, UArg arg1)
 
 
             createMessage(BOARD_ID, &activity, outMessage);
-            UART_write(uartHandle, outMessage, strlen(outMessage));
+            UART_write(uartHandle, outMessage, strlen(outMessage) + 1);
+            activity.eat = 0;
+            activity.exercise = 0;
+            activity.pet = 0;
+
+            programState = WAITING;
         }
+
 
         // Sleep 100ms
         Task_sleep(100000 / Clock_tickPeriod);
@@ -314,6 +332,11 @@ Void sensorTask(UArg arg0, UArg arg1)
             //Sleep 1 second
             Task_sleep(1000000 / Clock_tickPeriod);
 
+            // Turn LED on and beep
+            PIN_setOutputValue(led1Handle, Board_LED1, true);
+            buzzerBeep(600, 400, 3);
+            buzzerBeep(1000, 0, 1);
+
             programState = DETECT_MOVEMENT;
 
         }
@@ -323,26 +346,62 @@ Void sensorTask(UArg arg0, UArg arg1)
             if(button0Int){
                 button0Int = false;
 
+                // Make sound from button press
+                buzzerBeep(100, 0, 1);
+
                 programState = CLOSE_MPU_I2C;
             }
 
             // MPU ask data
             mpu9250_get_data(&i2cMPU, &ax, &ay, &az, &gx, &gy, &gz);
 
-    //      if(button2Interruption)
-    //          buttonInterruption = false
-    //          led2On()
-    //          buzzerBeep()
-    //          programState == DETECT_EATING
+            // Writing data to an array
+            mpuData[axle_x_acc][mpuDataIndex] = ax;
+            mpuData[axle_y_acc][mpuDataIndex] = ay;
+            mpuData[axle_z_acc][mpuDataIndex] = az;
+            mpuData[axle_x_gyro][mpuDataIndex] = gx;
+            mpuData[axle_y_gyro][mpuDataIndex] = gy;
+            mpuData[axle_z_gyro][mpuDataIndex] = gz;
+
+            // Detecting movement
+            // After that, starting to write new data to the array
+            mpuDataIndex++;
+            if (mpuDataIndex >= AXLESAMPLESIZE) {
+                detectMovement();
+                mpuDataIndex = 0;
+
+                // Beep when motion detected
+                if (lastActivity.eat != activity.eat) {
+                    buzzerBeep(200, 200, 2);
+                    lastActivity.eat = activity.eat;
+
+                }
+                else if (lastActivity.exercise != activity.exercise) {
+                    buzzerBeep(200, 200, 1);
+                    lastActivity.exercise = activity.exercise;
+
+                }
+                else if (lastActivity.pet != activity.pet) {
+                    buzzerBeep(200, 200, 3);
+                    lastActivity.pet = activity.pet;
+
+                }
+            }
+
         }
 
         // Close mpu i2c bus
         else if (programState == CLOSE_MPU_I2C) {
             I2C_close(i2cMPU);
             Clock_stop(clkHandle); // Stop clock interruptions
+            // Turn LED off
+            PIN_setOutputValue(led1Handle, Board_LED1, false);
 
             // Sleep 1 second
             Task_sleep(1000000 / Clock_tickPeriod);
+            // Beep for game end
+            buzzerBeep(1500, 0, 1);
+
 
             programState = UPDATE_STATUS_TO_HOST;
         }
@@ -370,8 +429,8 @@ Void sensorTask(UArg arg0, UArg arg1)
 
             ambientLight = opt3001_get_data(&i2c);
 
-            sprintf(merkkijono, "Sensor:%f\n", ambientLight);
-            System_printf(merkkijono);
+            sprintf(tempStr, "Sensor:%f\n", ambientLight);
+            System_printf(tempStr);
             System_flush();
 
             sensorState = CLOSE_I2C;
@@ -626,4 +685,41 @@ void processMessage(char *message) {
         }
     }
 
+}
+
+void detectMovement(void) {
+    int i;
+    char str[20];
+
+    for (i = 0; i < AXLESAMPLESIZE; i++) {
+
+        // Detect excercising
+        if (abs(mpuData[axle_x_acc][i]) > 1.3 || abs(mpuData[axle_y_acc][i]) > 1.3) {
+
+            activity.exercise++;
+            sprintf(str, "EXERCISE: %i\n", activity.exercise);
+            System_printf(str);
+            System_flush();
+            break;
+
+        // Detect eating
+        } else if (abs(mpuData[axle_z_acc][i]) > 0.9 && abs(mpuData[axle_y_gyro][i] > 15)) {
+
+            activity.eat++;
+            sprintf(str, "EAT: %i\n", activity.eat);
+            System_printf(str);
+            System_flush();
+            break;
+        // Detect petting
+          } else if (abs(mpuData[axle_x_gyro][i] > 200) && (mpuData[axle_y_acc][i] < 0.7 || mpuData[axle_z_acc][i] < 0.7)) {
+
+            activity.pet++;
+            sprintf(str, "PET: %i\n", activity.pet);
+            System_printf(str);
+            System_flush();
+            break;
+        }
+    }
+    System_printf("Doing nothing\n");
+    System_flush();
 }
