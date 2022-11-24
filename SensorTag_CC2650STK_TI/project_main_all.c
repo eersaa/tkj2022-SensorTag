@@ -1,5 +1,6 @@
 /* C Standard library */
 #include <stdio.h>
+#include <stdlib.h>
 
 /* XDCtools files */
 #include <xdc/std.h>
@@ -171,7 +172,8 @@ void clkFxn(UArg arg0) {
 // Uart exception handler
 static void uartFxn(UART_Handle handle, void *rxBuf, size_t len) {
       if (commState == UART_WAITING) {
-          snprintf(inMessage, B_MAX_LEN, "%s", rxBuf);
+          //snprintf(inMessage, B_MAX_LEN, "%s", rxBuf);
+          memcpy(inMessage, rxBuf, B_MAX_LEN);
 
           commState = UART_PROCESS_MESSAGE;
       }
@@ -242,9 +244,10 @@ Void commTask(UArg arg0, UArg arg1)
     {
         // Process incoming message
         if(commState == UART_PROCESS_MESSAGE &&
-            !programState == UPDATE_STATUS_TO_HOST){
+            !(programState == UPDATE_STATUS_TO_HOST)){
 
-            //processMessage()
+            processMessage(inMessage);
+
             // Start listening the UART again
             UART_read(uartHandle, uartBuffer, B_MAX_LEN);
 
@@ -254,7 +257,7 @@ Void commTask(UArg arg0, UArg arg1)
 
         // Update status to host
         if (programState == UPDATE_STATUS_TO_HOST &&
-              !commState == UART_PROCESS_MESSAGE) {
+              !(commState == UART_PROCESS_MESSAGE)) {
 
             Clock_stop(clkHandle); // Stop clock interruptions
             //createMessage(deviceID, *activity, message);
@@ -590,7 +593,7 @@ void createMessage(uint8_t *deviceID, struct activity *activity, char *message) 
 
 void processMessage(char *message) {
 
-    uint16_t msg_id;
+    int16_t msg_id;
     char *token;
 
     // Try to extract the id from the message
