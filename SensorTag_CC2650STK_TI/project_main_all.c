@@ -127,7 +127,7 @@ struct activity {
 };
 
 // Define global variable for activity data
-struct activity activity = {0, 0, 0};
+struct activity activity = {1, 1, 1};
 
 // Function prototypes
 
@@ -136,7 +136,7 @@ struct activity activity = {0, 0, 0};
 void buzzerBeep(uint16_t beepDuration, uint16_t pauseDuration, uint16_t beeps);
 
 // Create message to be sent to host
-void createMessage(uint8_t *deviceID, struct activity *activity, char *message);
+void createMessage(uint16_t deviceID, struct activity *activity, char *message);
 
 // Process incoming message
 void processMessage(char *message);
@@ -149,6 +149,9 @@ void button0Fxn(PIN_Handle handle, PIN_Id pinId){
         button0Int = true;
     }
     else if(programState == OPEN_MPU_I2C){
+        button0Int = true;
+    }
+    else if(programState == DETECT_MOVEMENT){
         button0Int = true;
     }
 
@@ -243,8 +246,7 @@ Void commTask(UArg arg0, UArg arg1)
     while (1)
     {
         // Process incoming message
-        if(commState == UART_PROCESS_MESSAGE &&
-            !(programState == UPDATE_STATUS_TO_HOST)){
+        if(commState == UART_PROCESS_MESSAGE){
 
             processMessage(inMessage);
 
@@ -259,9 +261,9 @@ Void commTask(UArg arg0, UArg arg1)
         if (programState == UPDATE_STATUS_TO_HOST &&
               !(commState == UART_PROCESS_MESSAGE)) {
 
-            Clock_stop(clkHandle); // Stop clock interruptions
-            //createMessage(deviceID, *activity, message);
-            //sendMessageUart()
+
+            createMessage(BOARD_ID, &activity, outMessage);
+            UART_write(uartHandle, outMessage, strlen(outMessage));
         }
 
         // Sleep 100ms
@@ -337,6 +339,8 @@ Void sensorTask(UArg arg0, UArg arg1)
         // Close mpu i2c bus
         else if (programState == CLOSE_MPU_I2C) {
             I2C_close(i2cMPU);
+            Clock_stop(clkHandle); // Stop clock interruptions
+
             // Sleep 1 second
             Task_sleep(1000000 / Clock_tickPeriod);
 
@@ -524,12 +528,12 @@ void buzzerBeep(uint16_t beepDuration, uint16_t pauseDuration, uint16_t beeps) {
 
 }
 
-void createMessage(uint8_t *deviceID, struct activity *activity, char *message) {
+void createMessage(uint16_t deviceID, struct activity *activity, char *message) {
     // To know if output empty message
     int8_t emptyMessage = true;
 
     // Place the id in the begin of string
-    snprintf(message, B_MAX_LEN,"id:%d", *deviceID);
+    snprintf(message, B_MAX_LEN,"id:%d", deviceID);
 
     // If all values have some data
     if (activity->eat > 0 &&
